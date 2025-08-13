@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Code, Users, BookOpen } from 'lucide-react';
+import { problemsAPI } from '../../services/api';
 
 const TopicsPage = () => {
   const [problems, setProblems] = useState([]);
@@ -13,11 +14,14 @@ const TopicsPage = () => {
 
   const fetchProblems = async () => {
     try {
-      const response = await fetch('/api/problems?limit=1000');
-      const data = await response.json();
+      console.log('🔍 Fetching problems for topics page...');
+      const response = await problemsAPI.getAll({ limit: 1000 });
+      const data = response.data;
+      console.log('✅ Topics page: Fetched problems:', data.problems?.length || 0);
       setProblems(data.problems || []);
     } catch (error) {
-      console.error('Error fetching problems:', error);
+      console.error('❌ Error fetching problems for topics:', error);
+      console.error('   Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
