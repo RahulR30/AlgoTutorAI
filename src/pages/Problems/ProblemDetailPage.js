@@ -17,6 +17,7 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { problemsAPI } from '../../services/api';
 
 const ProblemDetailPage = () => {
   const { id } = useParams();
@@ -40,8 +41,10 @@ const ProblemDetailPage = () => {
 
   const fetchProblem = async () => {
     try {
-      const response = await fetch(`/api/problems/${id}`);
-      const data = await response.json();
+      console.log('🔍 Fetching problem with ID:', id);
+      const response = await problemsAPI.getById(id);
+      const data = response.data;
+      console.log('✅ Problem data received:', data);
       setProblem(data.problem);
       
       // Set initial code based on selected language
@@ -49,7 +52,8 @@ const ProblemDetailPage = () => {
         setCode(data.problem.starterCode[selectedLanguage] || '');
       }
     } catch (error) {
-      console.error('Error fetching problem:', error);
+      console.error('❌ Error fetching problem:', error);
+      console.error('   Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -131,28 +135,24 @@ int main() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/problems/${id}/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          language: selectedLanguage,
-          code: code
-        })
+      console.log('📝 Submitting solution for problem:', id);
+      const response = await problemsAPI.submitSolution(id, {
+        language: selectedLanguage,
+        code: code
       });
       
-      if (response.status === 401) {
-        setSubmissionResult({ error: 'Authentication failed. Please login again.' });
-        return;
-      }
-      
-      const result = await response.json();
+      const result = response.data;
+      console.log('✅ Submission result:', result);
       setSubmissionResult(result);
     } catch (error) {
-      console.error('Error submitting solution:', error);
-      setSubmissionResult({ error: 'Failed to submit solution' });
+      console.error('❌ Error submitting solution:', error);
+      console.error('   Error details:', error.response?.data || error.message);
+      
+      if (error.response?.status === 401) {
+        setSubmissionResult({ error: 'Authentication failed. Please login again.' });
+      } else {
+        setSubmissionResult({ error: 'Failed to submit solution' });
+      }
     } finally {
       setIsSubmitting(false);
     }
