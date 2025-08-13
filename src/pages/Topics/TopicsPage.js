@@ -49,11 +49,34 @@ const TopicsPage = () => {
     }
     
     console.log(`📊 Topic "${topicName}": Found in topics data:`, topic);
+    
+    // Handle both old and new data formats
+    let easy = 0, medium = 0, hard = 0;
+    
+    if (Array.isArray(topic.counts)) {
+      // Old format: counts is an array of objects
+      if (topic.counts.length > 0 && typeof topic.counts[0] === 'object') {
+        easy = topic.counts[0]?.easy || 0;
+        medium = topic.counts[0]?.medium || 0;
+        hard = topic.counts[0]?.hard || 0;
+      } else {
+        // Old format: counts is an array of difficulty strings
+        easy = topic.counts.filter(c => c === 'easy').length;
+        medium = topic.counts.filter(c => c === 'medium').length;
+        hard = topic.counts.filter(c => c === 'hard').length;
+      }
+    } else if (typeof topic.counts === 'object') {
+      // New format: counts is a single object
+      easy = topic.counts?.easy || 0;
+      medium = topic.counts?.medium || 0;
+      hard = topic.counts?.hard || 0;
+    }
+    
     return {
       total: topic.total || 0,
-      easy: topic.counts?.easy || 0,
-      medium: topic.counts?.medium || 0,
-      hard: topic.counts?.hard || 0
+      easy,
+      medium,
+      hard
     };
   };
 
@@ -140,15 +163,30 @@ const TopicsPage = () => {
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Problems</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{topics.reduce((sum, t) => sum + (t.counts?.easy || 0), 0)}</div>
+            <div className="text-2xl font-bold text-green-600">{topics.reduce((sum, t) => {
+              if (Array.isArray(t.counts) && t.counts.length > 0 && typeof t.counts[0] === 'object') {
+                return sum + (t.counts[0]?.easy || 0);
+              }
+              return sum + (t.counts?.easy || 0);
+            }, 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Easy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{topics.reduce((sum, t) => sum + (t.counts?.medium || 0), 0)}</div>
+            <div className="text-2xl font-bold text-yellow-600">{topics.reduce((sum, t) => {
+              if (Array.isArray(t.counts) && t.counts.length > 0 && typeof t.counts[0] === 'object') {
+                return sum + (t.counts[0]?.medium || 0);
+              }
+              return sum + (t.counts?.medium || 0);
+            }, 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Medium</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{topics.reduce((sum, t) => sum + (t.counts?.hard || 0), 0)}</div>
+            <div className="text-2xl font-bold text-red-600">{topics.reduce((sum, t) => {
+              if (Array.isArray(t.counts) && t.counts.length > 0 && typeof t.counts[0] === 'object') {
+                return sum + (t.counts[0]?.hard || 0);
+              }
+              return sum + (t.counts?.hard || 0);
+            }, 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Hard</div>
           </div>
         </div>
