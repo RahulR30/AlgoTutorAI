@@ -5,24 +5,23 @@ import { Code, Users, BookOpen } from 'lucide-react';
 import { problemsAPI } from '../../services/api';
 
 const TopicsPage = () => {
-  const [problems, setProblems] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProblems();
+    fetchTopics();
   }, []);
 
-  const fetchProblems = async () => {
+  const fetchTopics = async () => {
     try {
-      console.log('🔍 Fetching problems for topics page...');
-      const response = await problemsAPI.getAll({ limit: 1000 });
+      console.log('🔍 Fetching topics list from API...');
+      const response = await problemsAPI.getTopics();
       const data = response.data;
-      console.log('✅ Topics page: Fetched problems:', data.problems?.length || 0);
-      console.log('📊 Sample problem data:', data.problems?.[0]);
-      console.log('🔍 All topics found:', data.problems?.map(p => p.topics).flat().filter(Boolean));
-      setProblems(data.problems || []);
+      console.log('✅ Topics page: Fetched topics:', data.topics?.length || 0);
+      console.log('📊 Sample topic data:', data.topics?.[0]);
+      setTopics(data.topics || []);
     } catch (error) {
-      console.error('❌ Error fetching problems for topics:', error);
+      console.error('❌ Error fetching topics:', error);
       console.error('   Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
@@ -42,15 +41,19 @@ const TopicsPage = () => {
     return topicIcons[topic] || '📚';
   };
 
-  const getTopicStats = (topic) => {
-    const topicProblems = problems.filter(p => p.topics && p.topics.includes(topic));
-    console.log(`📊 Topic "${topic}": Found ${topicProblems.length} problems`);
-    console.log(`   Sample problems:`, topicProblems.slice(0, 3).map(p => ({ title: p.title, topics: p.topics, difficulty: p.difficulty })));
+  const getTopicStats = (topicName) => {
+    const topic = topics.find(t => t.name === topicName);
+    if (!topic) {
+      console.log(`📊 Topic "${topicName}": Not found in topics data`);
+      return { total: 0, easy: 0, medium: 0, hard: 0 };
+    }
+    
+    console.log(`📊 Topic "${topicName}": Found in topics data:`, topic);
     return {
-      total: topicProblems.length,
-      easy: topicProblems.filter(p => p.difficulty === 'easy').length,
-      medium: topicProblems.filter(p => p.difficulty === 'medium').length,
-      hard: topicProblems.filter(p => p.difficulty === 'hard').length
+      total: topic.total || 0,
+      easy: topic.counts?.easy || 0,
+      medium: topic.counts?.medium || 0,
+      hard: topic.counts?.hard || 0
     };
   };
 
@@ -133,19 +136,19 @@ const TopicsPage = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{problems.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{topics.reduce((sum, t) => sum + (t.total || 0), 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Problems</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{problems.filter(p => p.difficulty === 'easy').length}</div>
+            <div className="text-2xl font-bold text-green-600">{topics.reduce((sum, t) => sum + (t.counts?.easy || 0), 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Easy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{problems.filter(p => p.difficulty === 'medium').length}</div>
+            <div className="text-2xl font-bold text-yellow-600">{topics.reduce((sum, t) => sum + (t.counts?.medium || 0), 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Medium</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{problems.filter(p => p.difficulty === 'hard').length}</div>
+            <div className="text-2xl font-bold text-red-600">{topics.reduce((sum, t) => sum + (t.counts?.hard || 0), 0)}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Hard</div>
           </div>
         </div>
