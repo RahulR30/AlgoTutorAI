@@ -25,6 +25,17 @@ console.log('   NODE_ENV:', process.env.NODE_ENV);
 console.log('   MONGODB_URI exists:', !!process.env.MONGODB_URI);
 console.log('   JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
+// Check for critical environment variables
+if (!process.env.MONGODB_URI) {
+  console.warn('⚠️  WARNING: MONGODB_URI not set. Server may not start properly.');
+  console.warn('   Please set MONGODB_URI in Railway environment variables.');
+}
+
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Authentication will not work.');
+  console.warn('   Please set JWT_SECRET in Railway environment variables.');
+}
+
 // Security middleware
 app.use(helmet());
 app.use(compression());
@@ -63,7 +74,9 @@ app.get('/api/health', (req, res) => {
     message: 'AlgoTutorAI Server is running',
     mode: 'mongodb',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development'
+    env: process.env.NODE_ENV || 'development',
+    mongoConnected: !!process.env.MONGODB_URI,
+    jwtConfigured: !!process.env.JWT_SECRET
   });
 });
 
@@ -86,17 +99,28 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting AlgoTutorAI Server...');
     
-    // Connect to MongoDB
-    console.log('📊 Attempting to connect to MongoDB...');
-    await connectDB();
-    console.log('📊 MongoDB connected successfully');
+    // Only try to connect to MongoDB if URI is provided
+    if (process.env.MONGODB_URI) {
+      console.log('📊 Attempting to connect to MongoDB...');
+      await connectDB();
+      console.log('📊 MongoDB connected successfully');
+    } else {
+      console.log('⚠️  Skipping MongoDB connection - MONGODB_URI not set');
+    }
     
     app.listen(PORT, () => {
       console.log(`🚀 AlgoTutorAI Server running on port ${PORT}`);
       console.log(`📚 Ready to help students learn algorithms and data structures!`);
-      console.log(`🔧 Running with FULL FUNCTIONALITY (MongoDB mode)`);
-      console.log(`🎯 Features: Real code execution, AI analysis, Progress tracking`);
-      console.log(`🗄️  Database: MongoDB Atlas (Cloud)`);
+      
+      if (process.env.MONGODB_URI) {
+        console.log(`🔧 Running with FULL FUNCTIONALITY (MongoDB mode)`);
+        console.log(`🎯 Features: Real code execution, AI analysis, Progress tracking`);
+        console.log(`🗄️  Database: MongoDB Atlas (Cloud)`);
+      } else {
+        console.log(`⚠️  Running in LIMITED mode - MongoDB not configured`);
+        console.log(`🔧 Please set MONGODB_URI environment variable for full functionality`);
+      }
+      
       console.log(`🌐 Health check available at: http://localhost:${PORT}/api/health`);
     });
 
@@ -104,7 +128,17 @@ const startServer = async () => {
     console.error('❌ Failed to start server:', error);
     console.error('❌ Error details:', error.message);
     console.error('❌ Error stack:', error.stack);
-    process.exit(1);
+    
+    // Don't exit if it's just a MongoDB connection issue
+    if (error.message.includes('MongoDB') || error.message.includes('connect')) {
+      console.log('⚠️  Starting server without MongoDB connection...');
+      app.listen(PORT, () => {
+        console.log(`🚀 AlgoTutorAI Server running on port ${PORT} (Limited Mode)`);
+        console.log(`🌐 Health check available at: http://localhost:${PORT}/api/health`);
+      });
+    } else {
+      process.exit(1);
+    }
   }
 };
 
