@@ -49,6 +49,47 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Update an existing problem
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    console.log(`📝 Updating problem ${id} with data:`, JSON.stringify(updateData, null, 2));
+    
+    // Find and update the problem
+    const updatedProblem = await Problem.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedProblem) {
+      return res.status(404).json({ error: 'Problem not found' });
+    }
+    
+    console.log('✅ Problem updated successfully');
+    
+    res.json({ 
+      message: 'Problem updated successfully',
+      problem: {
+        id: updatedProblem._id,
+        title: updatedProblem.title,
+        difficulty: updatedProblem.difficulty,
+        category: updatedProblem.category
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error updating problem:', error);
+    console.error('❌ Error details:', error.message);
+    
+    res.status(500).json({ 
+      error: 'Failed to update problem',
+      details: error.message
+    });
+  }
+});
+
 // Get all problems with filtering, pagination, and search
 router.get('/', async (req, res) => {
   try {
