@@ -11,6 +11,8 @@ router.post('/', async (req, res) => {
   try {
     const problemData = req.body;
     
+    console.log('📝 Creating problem with data:', JSON.stringify(problemData, null, 2));
+    
     // Check if problem with same title already exists
     const existingProblem = await Problem.findOne({ title: problemData.title });
     if (existingProblem) {
@@ -19,7 +21,10 @@ router.post('/', async (req, res) => {
     
     // Create new problem
     const problem = new Problem(problemData);
+    console.log('🔍 Problem model created, attempting to save...');
+    
     await problem.save();
+    console.log('✅ Problem saved successfully');
     
     res.status(201).json({ 
       message: 'Problem created successfully',
@@ -31,8 +36,16 @@ router.post('/', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating problem:', error);
-    res.status(500).json({ error: 'Failed to create problem' });
+    console.error('❌ Error creating problem:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Send more detailed error information
+    res.status(500).json({ 
+      error: 'Failed to create problem',
+      details: error.message,
+      field: error.errors ? Object.keys(error.errors)[0] : 'unknown'
+    });
   }
 });
 
