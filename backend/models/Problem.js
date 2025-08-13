@@ -25,7 +25,7 @@ const problemSchema = new mongoose.Schema({
   },
   slug: {
     type: String,
-    required: true,
+    required: false, // Changed from true to false
     unique: true,
     lowercase: true,
     trim: true
@@ -119,6 +119,11 @@ const problemSchema = new mongoose.Schema({
 
 // Pre-save hook to generate slug from title
 problemSchema.pre('save', function(next) {
+  console.log('🔍 Pre-save hook triggered');
+  console.log('   Title:', this.title);
+  console.log('   Is new:', this.isNew);
+  console.log('   Is modified title:', this.isModified('title'));
+  
   if (this.isModified('title') || this.isNew) {
     this.slug = this.title
       .toLowerCase()
@@ -126,6 +131,10 @@ problemSchema.pre('save', function(next) {
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .trim('-'); // Remove leading/trailing hyphens
+    
+    console.log('   Generated slug:', this.slug);
+  } else {
+    console.log('   Slug not modified, keeping existing:', this.slug);
   }
   next();
 });
