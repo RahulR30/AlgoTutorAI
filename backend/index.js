@@ -54,8 +54,31 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Get the base domain without trailing slash
+    const baseDomain = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : 'http://localhost:3000';
+    
+    // Allow requests from the base domain and with trailing slash
+    if (origin === baseDomain || origin === baseDomain + '/') {
+      return callback(null, true);
+    }
+    
+    // Allow localhost for development
+    if (origin === 'http://localhost:3000' || origin === 'http://localhost:3000/') {
+      return callback(null, true);
+    }
+    
+    console.log('🚫 CORS blocked origin:', origin);
+    console.log('✅ Allowed origins:', baseDomain, baseDomain + '/');
+    
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Logging middleware
