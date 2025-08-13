@@ -193,7 +193,11 @@ router.put('/profile', auth, async (req, res) => {
     if (location !== undefined) updates['profile.location'] = location;
     if (website !== undefined) updates['profile.website'] = website;
 
-    const updatedUser = await inMemoryDB.updateUser(req.user.id, updates);
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true }
+    );
     
     if (!updatedUser) {
       return res.status(404).json({

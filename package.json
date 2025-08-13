@@ -38,7 +38,13 @@
     "sync:count": "node simple-sync.js count",
     "extract:all": "node extract-all-problems.js",
     "sync:300": "node sync-300-problems.js sync",
-    "sync:300:count": "node sync-300-problems.js count"
+    "sync:300:count": "node sync-300-problems.js count",
+    "populate:300": "node populate-300-problems.js populate",
+    "populate:300:count": "node populate-300-problems.js count",
+    "mass:populate": "node mass-populate-problems.js populate",
+    "mass:count": "node mass-populate-problems.js count",
+    "batch:populate": "node batch-populate-problems.js populate",
+    "batch:count": "node batch-populate-problems.js count"
   },
   "eslintConfig": {
     "extends": [

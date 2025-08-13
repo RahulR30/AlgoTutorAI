@@ -18,6 +18,8 @@ const TopicsPage = () => {
       const response = await problemsAPI.getAll({ limit: 1000 });
       const data = response.data;
       console.log('✅ Topics page: Fetched problems:', data.problems?.length || 0);
+      console.log('📊 Sample problem data:', data.problems?.[0]);
+      console.log('🔍 All topics found:', data.problems?.map(p => p.topics).flat().filter(Boolean));
       setProblems(data.problems || []);
     } catch (error) {
       console.error('❌ Error fetching problems for topics:', error);
@@ -42,6 +44,8 @@ const TopicsPage = () => {
 
   const getTopicStats = (topic) => {
     const topicProblems = problems.filter(p => p.topics && p.topics.includes(topic));
+    console.log(`📊 Topic "${topic}": Found ${topicProblems.length} problems`);
+    console.log(`   Sample problems:`, topicProblems.slice(0, 3).map(p => ({ title: p.title, topics: p.topics, difficulty: p.difficulty })));
     return {
       total: topicProblems.length,
       easy: topicProblems.filter(p => p.difficulty === 'easy').length,
