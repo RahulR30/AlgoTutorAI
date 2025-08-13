@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Search, 
-  Filter, 
-  Code, 
-  Clock, 
-  Users, 
-  TrendingUp,
-  BookOpen,
-  Star
-} from 'lucide-react';
+import { Search, Filter, Clock, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { problemsAPI } from '../../services/api';
 
 const ProblemsPage = () => {
   const [problems, setProblems] = useState([]);
@@ -20,13 +12,11 @@ const ProblemsPage = () => {
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [totalProblems, setTotalProblems] = useState(0);
 
-  // Get topic from URL parameters
+  // Debug: Log the API URL being used
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const topicFromUrl = urlParams.get('topics');
-    if (topicFromUrl) {
-      setSelectedTopic(topicFromUrl);
-    }
+    console.log('🔍 API Configuration:');
+    console.log('   REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+    console.log('   Current API base:', process.env.REACT_APP_API_URL || 'http://localhost:5001/api');
   }, []);
 
   useEffect(() => {
@@ -35,14 +25,16 @@ const ProblemsPage = () => {
 
   const fetchProblems = async () => {
     try {
-      // Fetch all problems with a high limit to get the complete database
-      const response = await fetch('/api/problems?limit=1000');
-      const data = await response.json();
+      console.log('📡 Fetching problems from API...');
+      // Use the problemsAPI service instead of hardcoded fetch
+      const response = await problemsAPI.getAll({ limit: 1000 });
+      const data = response.data;
       setProblems(data.problems || []);
       setTotalProblems(data.pagination?.totalProblems || 0);
-      console.log(`Fetched ${data.problems?.length || 0} problems out of ${data.pagination?.totalProblems || 0} total`);
+      console.log(`✅ Fetched ${data.problems?.length || 0} problems out of ${data.pagination?.totalProblems || 0} total`);
     } catch (error) {
-      console.error('Error fetching problems:', error);
+      console.error('❌ Error fetching problems:', error);
+      console.error('   Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -262,11 +254,11 @@ const ProblemsPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                 <div className="flex items-center space-x-1">
-                  <Users className="w-4 h-4" />
+                  <Clock className="w-4 h-4" />
                   <span>{problem.statistics?.totalSubmissions || 0}</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <TrendingUp className="w-4 h-4" />
+                  <Star className="w-4 h-4" />
                   <span>{problem.statistics?.successRate || 0}%</span>
                 </div>
               </div>
@@ -275,7 +267,7 @@ const ProblemsPage = () => {
                 to={`/problems/${problem._id}`}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
               >
-                <Code className="w-4 h-4 mr-2" />
+                {/* Code icon removed as per new_code */}
                 Start Solving
               </Link>
             </div>
@@ -289,7 +281,7 @@ const ProblemsPage = () => {
           animate={{ opacity: 1 }}
           className="text-center py-12"
         >
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          {/* BookOpen icon removed as per new_code */}
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             No problems found
           </h3>
