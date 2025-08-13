@@ -36,8 +36,9 @@
     "eject": "react-scripts eject",
     "sync:problems": "node simple-sync.js populate",
     "sync:count": "node simple-sync.js count",
-    "sync:watch": "node dev-sync.js",
-    "sync:auto": "node auto-sync-problems.js start 5"
+    "extract:all": "node extract-all-problems.js",
+    "sync:300": "node sync-300-problems.js sync",
+    "sync:300:count": "node sync-300-problems.js count"
   },
   "eslintConfig": {
     "extends": [
