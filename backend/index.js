@@ -18,6 +18,13 @@ const connectDB = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Debug environment variables
+console.log('🔍 Environment check:');
+console.log('   PORT:', process.env.PORT);
+console.log('   NODE_ENV:', process.env.NODE_ENV);
+console.log('   MONGODB_URI exists:', !!process.env.MONGODB_URI);
+console.log('   JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
 // Security middleware
 app.use(helmet());
 app.use(compression());
@@ -55,7 +62,8 @@ app.get('/api/health', (req, res) => {
     status: 'OK', 
     message: 'AlgoTutorAI Server is running',
     mode: 'mongodb',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -76,7 +84,10 @@ app.use('*', (req, res) => {
 // Start server
 const startServer = async () => {
   try {
+    console.log('🚀 Starting AlgoTutorAI Server...');
+    
     // Connect to MongoDB
+    console.log('📊 Attempting to connect to MongoDB...');
     await connectDB();
     console.log('📊 MongoDB connected successfully');
     
@@ -85,13 +96,27 @@ const startServer = async () => {
       console.log(`📚 Ready to help students learn algorithms and data structures!`);
       console.log(`🔧 Running with FULL FUNCTIONALITY (MongoDB mode)`);
       console.log(`🎯 Features: Real code execution, AI analysis, Progress tracking`);
-      console.log(`🗄️  Database: MongoDB on localhost:27017`);
+      console.log(`🗄️  Database: MongoDB Atlas (Cloud)`);
+      console.log(`🌐 Health check available at: http://localhost:${PORT}/api/health`);
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
     process.exit(1);
   }
 };
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 startServer();
