@@ -100,31 +100,10 @@ const problemSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  isPremium: {
-    type: Boolean,
-    default: false
-  },
-  tags: [String],
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  timeLimit: {
-    type: Number,
-    default: 1000, // milliseconds
-    min: 100,
-    max: 10000
-  },
-  memoryLimit: {
-    type: Number,
-    default: 128, // MB
-    min: 16,
-    max: 512
-  },
   category: {
     type: String,
-    enum: ['algorithms', 'data-structures', 'mathematics', 'strings', 'arrays', 'graphs', 'trees', 'dynamic-programming', 'greedy', 'backtracking', 'other'],
-    default: 'algorithms'
+    required: true,
+    trim: true
   },
   estimatedTime: {
     type: Number,
@@ -136,6 +115,19 @@ const problemSchema = new mongoose.Schema({
   learningObjectives: [String]
 }, {
   timestamps: true
+});
+
+// Pre-save hook to generate slug from title
+problemSchema.pre('save', function(next) {
+  if (this.isModified('title') || this.isNew) {
+    this.slug = this.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim('-'); // Remove leading/trailing hyphens
+  }
+  next();
 });
 
 // Indexes for better query performance - commented out to avoid conflicts
