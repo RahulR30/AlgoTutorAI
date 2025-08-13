@@ -7,3 +7,7 @@ healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
+
+[build.environment]
+NIXPACKS_NODE_PACKAGE_MANAGER = "npm"
+NIXPACKS_NPM_INSTALL_CMD = "npm install"
