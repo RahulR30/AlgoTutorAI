@@ -2,7 +2,22 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/algotutor-ai', {
+    const mongoURI = process.env.MONGODB_URI;
+    
+    // Debug the connection string
+    console.log('🔍 MongoDB Connection Debug:');
+    console.log('   MONGODB_URI length:', mongoURI ? mongoURI.length : 'undefined');
+    console.log('   MONGODB_URI starts with:', mongoURI ? mongoURI.substring(0, 20) + '...' : 'undefined');
+    
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+    
+    if (!mongoURI.startsWith('mongodb://') && !mongoURI.startsWith('mongodb+srv://')) {
+      throw new Error(`Invalid MongoDB URI format. Expected "mongodb://" or "mongodb+srv://", got: ${mongoURI.substring(0, 20)}...`);
+    }
+    
+    const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
@@ -20,7 +35,16 @@ const connectDB = async () => {
     }
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+    console.error('❌ Error details:', error.message);
+    
+    if (error.message.includes('MONGODB_URI environment variable is not set')) {
+      console.error('💡 Solution: Set MONGODB_URI in Railway environment variables');
+    } else if (error.message.includes('Invalid MongoDB URI format')) {
+      console.error('💡 Solution: Check MONGODB_URI format in Railway environment variables');
+      console.error('   Expected format: mongodb+srv://username:password@cluster.mongodb.net/database');
+    }
+    
+    throw error; // Re-throw so the main server can handle it
   }
 };
 
