@@ -6,6 +6,36 @@ const codeExecutor = require('../services/codeExecutor');
 
 const router = express.Router();
 
+// Create a new problem (for development/testing)
+router.post('/', async (req, res) => {
+  try {
+    const problemData = req.body;
+    
+    // Check if problem with same title already exists
+    const existingProblem = await Problem.findOne({ title: problemData.title });
+    if (existingProblem) {
+      return res.status(409).json({ error: 'Problem with this title already exists' });
+    }
+    
+    // Create new problem
+    const problem = new Problem(problemData);
+    await problem.save();
+    
+    res.status(201).json({ 
+      message: 'Problem created successfully',
+      problem: {
+        id: problem._id,
+        title: problem.title,
+        difficulty: problem.difficulty,
+        category: problem.category
+      }
+    });
+  } catch (error) {
+    console.error('Error creating problem:', error);
+    res.status(500).json({ error: 'Failed to create problem' });
+  }
+});
+
 // Get all problems with filtering, pagination, and search
 router.get('/', async (req, res) => {
   try {
