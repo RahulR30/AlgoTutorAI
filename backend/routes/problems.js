@@ -211,13 +211,7 @@ router.get('/topics/list', async (req, res) => {
           _id: '$topics',
           total: { $sum: 1 },
           counts: {
-            $push: {
-              $cond: [
-                { $eq: ['$difficulty', '$$CURRENT.difficulty'] },
-                '$difficulty',
-                null
-              ]
-            }
+            $push: '$difficulty'
           }
         }
       },
