@@ -39,7 +39,7 @@ async function createTestUser() {
       },
       topicProgress: [],
       preferences: {
-        difficulty: 'easy',
+        difficulty: 'beginner',
         topics: ['arrays', 'strings'],
         dailyGoal: 3,
         notifications: true,
