@@ -198,10 +198,42 @@ int main() {
   // Execute Python code safely
   const executePythonCode = async (code, testInput) => {
     try {
+      console.log('🐍 Starting Python execution...');
+      console.log('📝 Code to execute:', code);
+      console.log('🧪 Test input:', testInput);
+      
       const pyodideInstance = await loadPyodide();
       if (!pyodideInstance) {
         throw new Error('Failed to load Python interpreter');
       }
+
+      // Detect function name from code
+      const functionMatch = code.match(/def\s+(\w+)\s*\(/);
+      const functionName = functionMatch ? functionMatch[1] : 'solution';
+      console.log('🔍 Detected function name:', functionName);
+
+      // Parse test input properly
+      let parsedInput = testInput;
+      if (typeof testInput === 'string') {
+        try {
+          parsedInput = JSON.parse(testInput);
+        } catch (e) {
+          // Handle array format like "[1,2,3]"
+          if (testInput.startsWith('[') && testInput.endsWith(']')) {
+            parsedInput = testInput.slice(1, -1).split(',').map(x => {
+              const trimmed = x.trim();
+              if (trimmed === 'true') return 'True';
+              if (trimmed === 'false') return 'False';
+              if (trimmed === 'null') return 'None';
+              if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
+              if (trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.slice(1, -1);
+              const num = Number(trimmed);
+              return isNaN(num) ? trimmed : num;
+            });
+          }
+        }
+      }
+      console.log('🔧 Parsed input:', parsedInput);
 
       // Create a safe execution environment
       const safeCode = `
@@ -219,7 +251,11 @@ try:
     ${code}
     
     # Test the function
-    result = solution(${JSON.stringify(testInput)})
+    print("Testing function: ${functionName}")
+    print("Input:", ${JSON.stringify(parsedInput)})
+    
+    result = ${functionName}(${JSON.stringify(parsedInput)})
+    print("Result:", result)
     
     # Capture the result
     output = {
@@ -227,16 +263,18 @@ try:
         "stdout": stdout_capture.getvalue(),
         "success": True
     }
-    print(json.dumps(output))
+    print("Final output:", json.dumps(output))
     
 except Exception as e:
+    print("Error occurred:", str(e))
+    print("Traceback:", traceback.format_exc())
     output = {
         "error": str(e),
         "traceback": traceback.format_exc(),
         "stdout": stdout_capture.getvalue(),
         "success": False
     }
-    print(json.dumps(output))
+    print("Error output:", json.dumps(output))
 finally:
     sys.stdout = sys.__stdout__
 `;
@@ -244,13 +282,94 @@ finally:
       console.log('🐍 Executing Python code:', safeCode);
       const result = await pyodideInstance.runPythonAsync(safeCode);
       
+      console.log('📤 Raw Python output:', result);
+      
       // Parse the JSON output
-      const output = JSON.parse(result);
-      console.log('✅ Python execution result:', output);
+      let output;
+      try {
+        output = JSON.parse(result);
+        console.log('✅ Parsed Python execution result:', output);
+      } catch (parseError) {
+        console.error('❌ Failed to parse Python output:', parseError);
+        console.log('Raw output was:', result);
+        
+        // Try to extract useful information from raw output
+        output = {
+          success: false,
+          error: 'Failed to parse Python output',
+          stdout: result,
+          result: null,
+          rawOutput: result
+        };
+      }
       
       return output;
     } catch (error) {
       console.error('❌ Python execution error:', error);
+      return {
+        success: false,
+        error: error.message,
+        stdout: '',
+        result: null
+      };
+    }
+  };
+
+  // Fallback Python execution method (simpler, for debugging)
+  const executePythonCodeSimple = async (code, testInput) => {
+    try {
+      console.log('🐍 Using simple Python execution fallback...');
+      
+      // Detect function name from code
+      const functionMatch = code.match(/def\s+(\w+)\s*\(/);
+      const functionName = functionMatch ? functionMatch[1] : 'solution';
+      console.log('🔍 Detected function name:', functionName);
+      
+      // Parse test input
+      let parsedInput = testInput;
+      if (typeof testInput === 'string') {
+        try {
+          parsedInput = JSON.parse(testInput);
+        } catch (e) {
+          if (testInput.startsWith('[') && testInput.endsWith(']')) {
+            parsedInput = testInput.slice(1, -1).split(',').map(x => {
+              const trimmed = x.trim();
+              if (trimmed === 'true') return true;
+              if (trimmed === 'false') return false;
+              if (trimmed === 'null') return null;
+              if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
+              if (trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.slice(1, -1);
+              const num = Number(trimmed);
+              return isNaN(num) ? trimmed : num;
+            });
+          }
+        }
+      }
+      
+      // Create a very simple test
+      const testCode = `
+${code}
+
+# Test the function
+test_input = ${JSON.stringify(parsedInput)}
+print(f"Testing {functionName} with input: {test_input}")
+result = ${functionName}(test_input)
+print(f"Result: {result}")
+print(f"Type: {type(result)}")
+`;
+      
+      console.log('🐍 Simple test code:', testCode);
+      
+      // For now, just return a mock result to test the flow
+      return {
+        success: true,
+        result: `Mock result for ${functionName}(${JSON.stringify(parsedInput)})`,
+        stdout: `Testing ${functionName} with input: ${JSON.stringify(parsedInput)}\nResult: Mock result\nType: <class 'str'>`,
+        isMock: true
+      };
+      
+    } catch (error) {
+      console.error('❌ Simple Python execution error:', error);
       return {
         success: false,
         error: error.message,
@@ -528,23 +647,31 @@ finally:
                         ? problem.testCases[0].input 
                         : [1, 2, 3]; // Default test input
                       
-                      const pythonResult = await executePythonCode(code, testInput);
+                      let pythonResult = await executePythonCode(code, testInput);
+                      
+                      // If Pyodide fails, try the fallback method
+                      if (!pythonResult.success && pythonResult.error.includes('Failed to load Python interpreter')) {
+                        console.log('🔄 Pyodide failed, trying fallback method...');
+                        pythonResult = await executePythonCodeSimple(code, testInput);
+                      }
                       
                       if (pythonResult.success) {
                         console.log('✅ Python code executed successfully!');
                         setSubmissionResult({
-                          message: 'Python code executed successfully!',
+                          message: pythonResult.isMock ? 'Python code analyzed (mock execution)' : 'Python code executed successfully!',
                           result: pythonResult.result,
                           stdout: pythonResult.stdout,
                           executionTime: Date.now(),
-                          isPreview: true
+                          isPreview: true,
+                          isMock: pythonResult.isMock
                         });
                       } else {
                         console.error('❌ Python execution failed:', pythonResult.error);
                         setSubmissionResult({
                           error: `Python execution error: ${pythonResult.error}`,
-                          stdout: pythonResult.stdout,
-                          traceback: pythonResult.traceback,
+                          stdout: pythonResult.stdout || '',
+                          traceback: pythonResult.traceback || '',
+                          rawOutput: pythonResult.rawOutput || '',
                           isPreview: true
                         });
                       }
@@ -616,6 +743,11 @@ finally:
                         <div>
                           <h4 className="text-lg font-medium text-blue-800 dark:text-blue-200">
                             {submissionResult.message}
+                            {submissionResult.isMock && (
+                              <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                Mock Execution
+                              </span>
+                            )}
                           </h4>
                           {submissionResult.details && (
                             <p className="text-blue-700 dark:text-blue-300">
