@@ -36,10 +36,17 @@ const TopicsPage = () => {
       'backtracking': '🔄', 'two-pointers': '👆', 'sliding-window': '🪟',
       'binary-search': '��', 'sorting': '📈', 'recursion': '🔄',
       'bit-manipulation': '⚙️', 'math': '🧮', 'geometry': '��',
-      'game-theory': '🎮', 'system-design': '��️'
+      'game-theory': '🎮',
+      'Algorithms': '⚡', 'Array': '🔢', 'Binary Search': '🔍', 'Data Structures': '🏗️',
+      'Depth-First Search': '🔍', 'Divide and Conquer': '✂️', 'Dynamic Programming': '⚡',
+      'Greedy': '🎯', 'Hash Table': '🗂️', 'Linked List': '🔗', 'Math': '🧮',
+      'Recursion': '🔄', 'Sliding Window': '🪟', 'Sorting': '📈', 'Stack': '📚',
+      'String': '📝', 'Tree': '🌳', 'Two Pointers': '👆', 'example': '📝', 'test': '🧪', 'system-design': '��️'
     };
     return topicIcons[topic] || '📚';
   };
+  
+
 
   const getTopicStats = (topicName) => {
     const topic = topics.find(t => t.name === topicName);
@@ -80,12 +87,8 @@ const TopicsPage = () => {
     };
   };
 
-  const allTopics = [
-    'arrays', 'strings', 'linked-lists', 'stacks', 'queues', 'trees', 'graphs', 
-    'heaps', 'hash-tables', 'dynamic-programming', 'greedy', 'backtracking', 
-    'two-pointers', 'sliding-window', 'binary-search', 'sorting', 'recursion', 
-    'bit-manipulation', 'math', 'geometry', 'game-theory', 'system-design'
-  ];
+  // Use topics from backend instead of hardcoded list
+  const allTopics = topics.map(t => t.name) || [];
 
   if (loading) {
     return (
