@@ -38,20 +38,24 @@ class CodeExecutor {
     try {
       const startTime = Date.now();
       
-      // Create test file
-      const testFile = await this.createTestFile(language, code, testCase, tempDir, index);
+      // Parse test case input and expected output
+      const parsedInput = this.parseTestCaseInput(testCase.input);
+      const parsedExpectedOutput = this.parseTestCaseInput(testCase.expectedOutput);
+      
+      // Create test file with parsed data
+      const testFile = await this.createTestFile(language, code, { ...testCase, input: parsedInput, expectedOutput: parsedExpectedOutput }, tempDir, index);
       
       // Execute the code
       const { stdout, stderr, executionTime } = await this.executeFile(language, testFile, tempDir);
       
       // Parse and validate output
       const actualOutput = this.parseOutput(language, stdout);
-      const isCorrect = this.compareOutput(actualOutput, testCase.expectedOutput);
+      const isCorrect = this.compareOutput(actualOutput, parsedExpectedOutput);
       
       return {
         testCaseIndex: index,
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
+        input: parsedInput,
+        expectedOutput: parsedExpectedOutput,
         actualOutput: actualOutput,
         isCorrect: isCorrect,
         executionTime: executionTime,
@@ -105,7 +109,7 @@ ${code}
 
 // Test case
 const input = ${JSON.stringify(testCase.input)};
-const result = ${this.getJavaScriptFunctionCall(testCase.input)};
+const result = ${this.getJavaScriptFunctionCall(testCase.input, code)};
 console.log(JSON.stringify(result));
 `;
   }
@@ -117,7 +121,7 @@ ${code}
 # Test case
 import json
 input_data = ${JSON.stringify(testCase.input)}
-result = ${this.getPythonFunctionCall(testCase.input)}
+result = ${this.getPythonFunctionCall(testCase.input, code)}
 print(json.dumps(result))
 `;
   }
@@ -154,7 +158,15 @@ int main() {
 }`;
   }
 
-  getJavaScriptFunctionCall(input) {
+  getJavaScriptFunctionCall(input, code) {
+    // Try to detect function name from code
+    const functionMatch = code.match(/function\s+(\w+)\s*\(/);
+    if (functionMatch) {
+      const functionName = functionMatch[1];
+      return `${functionName}(${this.getJavaScriptArguments(input)})`;
+    }
+    
+    // Fallback to common patterns
     if (input.nums && input.target !== undefined) {
       return 'twoSum(input.nums, input.target)';
     } else if (input.s) {
@@ -167,7 +179,15 @@ int main() {
     return 'solution(input)';
   }
 
-  getPythonFunctionCall(input) {
+  getPythonFunctionCall(input, code) {
+    // Try to detect function name from code
+    const functionMatch = code.match(/def\s+(\w+)\s*\(/);
+    if (functionMatch) {
+      const functionName = functionMatch[1];
+      return `${functionName}(${this.getPythonArguments(input)})`;
+    }
+    
+    // Fallback to common patterns
     if (input.nums && input.target !== undefined) {
       return 'twoSum(input["nums"], input["target"])';
     } else if (input.s) {
@@ -178,6 +198,40 @@ int main() {
       return 'climbStairs(input["n"])';
     }
     return 'solution(input)';
+  }
+
+  getJavaScriptArguments(input) {
+    if (Array.isArray(input)) {
+      return input.map(arg => JSON.stringify(arg)).join(', ');
+    } else if (typeof input === 'object' && input !== null) {
+      return Object.entries(input).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(', ');
+    } else {
+      return JSON.stringify(input);
+    }
+  }
+
+  getPythonArguments(input) {
+    if (Array.isArray(input)) {
+      return input.map(arg => this.pythonValueToString(arg)).join(', ');
+    } else if (typeof input === 'object' && input !== null) {
+      return Object.entries(input).map(([key, value]) => `${key}=${this.pythonValueToString(value)}`).join(', ');
+    } else {
+      return this.pythonValueToString(input);
+    }
+  }
+
+  pythonValueToString(value) {
+    if (typeof value === 'string') {
+      return `"${value}"`;
+    } else if (typeof value === 'boolean') {
+      return value ? 'True' : 'False';
+    } else if (value === null) {
+      return 'None';
+    } else if (Array.isArray(value)) {
+      return `[${value.map(v => this.pythonValueToString(v)).join(', ')}]`;
+    } else {
+      return String(value);
+    }
   }
 
   getJavaTestCode(testCase) {
@@ -224,6 +278,61 @@ int main() {
       cpp: 'cpp'
     };
     return extensions[language] || 'txt';
+  }
+
+  // Parse test case input/output from string format to actual data structures
+  parseTestCaseInput(input) {
+    if (typeof input === 'string') {
+      try {
+        // Try to parse as JSON first
+        return JSON.parse(input);
+      } catch (e) {
+        // If not valid JSON, try to parse common formats
+        if (input.startsWith('[') && input.endsWith(']')) {
+          // Array format like "[1,2,3]"
+          return input.slice(1, -1).split(',').map(x => {
+            const trimmed = x.trim();
+            if (trimmed === 'true') return true;
+            if (trimmed === 'false') return false;
+            if (trimmed === 'null') return null;
+            if (trimmed === 'undefined') return undefined;
+            if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
+            if (trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.slice(1, -1);
+            const num = Number(trimmed);
+            return isNaN(num) ? trimmed : num;
+          });
+        } else if (input.startsWith('{') && input.endsWith('}')) {
+          // Object format like "{a:1,b:2}"
+          try {
+            return JSON.parse(input);
+          } catch (e) {
+            // Try to parse simple object format
+            const obj = {};
+            const content = input.slice(1, -1);
+            const pairs = content.split(',').map(pair => pair.trim());
+            pairs.forEach(pair => {
+              const [key, value] = pair.split(':').map(x => x.trim());
+              if (key && value !== undefined) {
+                obj[key] = this.parseTestCaseInput(value);
+              }
+            });
+            return obj;
+          }
+        } else if (input === 'true' || input === 'false') {
+          return input === 'true';
+        } else if (input === 'null') {
+          return null;
+        } else if (input === 'undefined') {
+          return undefined;
+        } else if (!isNaN(Number(input))) {
+          return Number(input);
+        } else if ((input.startsWith('"') && input.endsWith('"')) || 
+                   (input.startsWith("'") && input.endsWith("'"))) {
+          return input.slice(1, -1);
+        }
+      }
+    }
+    return input;
   }
 
   async executeFile(language, filepath, tempDir) {
