@@ -91,16 +91,44 @@ app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'AlgoTutorAI Server is running',
-    mode: 'mongodb',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development',
-    mongoConnected: !!process.env.MONGODB_URI,
-    jwtConfigured: !!process.env.JWT_SECRET
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check if Python is available
+    const { exec } = require('child_process');
+    const pythonCheck = new Promise((resolve) => {
+      exec('python3 --version', { timeout: 5000 }, (error, stdout, stderr) => {
+        if (error) {
+          resolve({ available: false, error: error.message, version: null });
+        } else {
+          resolve({ available: true, error: null, version: stdout.trim() });
+        }
+      });
+    });
+
+    const pythonStatus = await pythonCheck;
+    
+    res.json({ 
+      status: 'OK', 
+      message: 'AlgoTutorAI Server is running',
+      mode: 'mongodb',
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV || 'development',
+      mongoConnected: !!process.env.MONGODB_URI,
+      jwtConfigured: !!process.env.JWT_SECRET,
+      python: pythonStatus
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'OK', 
+      message: 'AlgoTutorAI Server is running',
+      mode: 'mongodb',
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV || 'development',
+      mongoConnected: !!process.env.MONGODB_URI,
+      jwtConfigured: !!process.env.JWT_SECRET,
+      python: { available: false, error: 'Health check failed', version: null }
+    });
+  }
 });
 
 // Error handling middleware

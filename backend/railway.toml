@@ -1,5 +1,5 @@
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
 
 [deploy]
 startCommand = "npm start"
@@ -9,5 +9,4 @@ restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
 [build.environment]
-NIXPACKS_NODE_PACKAGE_MANAGER = "npm"
-NIXPACKS_NPM_INSTALL_CMD = "npm install"
+NODE_ENV = "production"
