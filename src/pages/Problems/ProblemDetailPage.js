@@ -147,7 +147,38 @@ int main() {
       
       const result = response.data;
       console.log('✅ Submission result:', result);
-      setSubmissionResult(result);
+      console.log('📊 Result structure:', {
+        hasSubmission: !!result.submission,
+        hasOverallResult: !!result.submission?.overallResult,
+        hasExecutionResults: !!result.submission?.executionResults,
+        submissionKeys: result.submission ? Object.keys(result.submission) : [],
+        overallResultKeys: result.submission?.overallResult ? Object.keys(result.submission.overallResult) : [],
+        executionResultsLength: result.submission?.executionResults?.length || 0
+      });
+      
+      // Ensure we have the expected structure
+      if (!result.submission || !result.submission.overallResult) {
+        console.warn('⚠️ Submission result missing expected structure:', result);
+        // Try to create a proper structure from available data
+        const structuredResult = {
+          submission: {
+            overallResult: result.submission?.overallResult || {
+              isCorrect: false,
+              totalTestCases: 1,
+              passedTestCases: 0,
+              executionTime: 0,
+              score: 0
+            },
+            executionResults: result.submission?.executionResults || []
+          },
+          message: result.message || 'Solution submitted',
+          ...result
+        };
+        console.log('🔧 Structured result:', structuredResult);
+        setSubmissionResult(structuredResult);
+      } else {
+        setSubmissionResult(result);
+      }
     } catch (error) {
       console.error('❌ Error submitting solution:', error);
       console.error('   Error details:', error.response?.data || error.message);
@@ -714,6 +745,42 @@ print(f"Type: {type(result)}")
                   </>
                 )}
               </button>
+              
+              {/* Debug button to test submission result structure */}
+              <button
+                onClick={() => {
+                  console.log('🧪 Testing submission result structure...');
+                  const mockResult = {
+                    message: 'Test submission result',
+                    submission: {
+                      _id: 'test123',
+                      overallResult: {
+                        isCorrect: false,
+                        totalTestCases: 1,
+                        passedTestCases: 0,
+                        executionTime: 5,
+                        score: 0
+                      },
+                      executionResults: [
+                        {
+                          testCaseIndex: 0,
+                          input: '[1,2,3]',
+                          expectedOutput: '132',
+                          actualOutput: null,
+                          isCorrect: false,
+                          executionTime: 5,
+                          errorMessage: 'Test error message'
+                        }
+                      ]
+                    }
+                  };
+                  console.log('🧪 Mock submission result:', mockResult);
+                  setSubmissionResult(mockResult);
+                }}
+                className="px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+              >
+                🧪 Test Result
+              </button>
             </div>
           </div>
 
@@ -884,7 +951,7 @@ print(f"Type: {type(result)}")
                           <div className="space-y-3">
                             {submissionResult.submission.executionResults.map((result, index) => (
                               <div key={index} className={`p-4 rounded-lg border-2 ${
-                                result.passed 
+                                result.isCorrect 
                                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
                                   : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                               }`}>
@@ -894,14 +961,14 @@ print(f"Type: {type(result)}")
                                     Test Case {index + 1}
                                   </span>
                                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                    result.passed 
+                                    result.isCorrect 
                                       ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200' 
                                       : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
                                   }`}>
-                                    {result.passed ? '✅ PASSED' : '❌ FAILED'}
+                                    {result.isCorrect ? '✅ PASSED' : '❌ FAILED'}
                                   </span>
                                 </div>
-                                {!result.passed && (
+                                {!result.isCorrect && (
                                   <div className="mt-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                                       <div>
@@ -913,9 +980,17 @@ print(f"Type: {type(result)}")
                                       <div>
                                         <span className="font-semibold text-gray-700 dark:text-gray-300">Your Output:</span>
                                         <div className="mt-1 p-2 bg-white dark:bg-gray-600 rounded border font-mono text-xs">
-                                          {result.actualOutput}
+                                          {result.actualOutput || result.errorMessage || 'No output generated'}
                                         </div>
                                       </div>
+                                      {result.errorMessage && (
+                                        <div className="col-span-2">
+                                          <span className="font-semibold text-red-700 dark:text-red-300">Error:</span>
+                                          <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded border font-mono text-xs text-red-800 dark:text-red-200">
+                                            {result.errorMessage}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )}
