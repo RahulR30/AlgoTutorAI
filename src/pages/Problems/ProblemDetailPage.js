@@ -19,6 +19,10 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { problemsAPI } from '../../services/api';
 
+// Python interpreter for frontend execution
+let pyodide = null;
+let pyodideLoading = false;
+
 const ProblemDetailPage = () => {
   const { id } = useParams();
   const { token } = useAuth();
@@ -164,6 +168,95 @@ int main() {
       case 'medium': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-400';
       case 'hard': return 'text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400';
       default: return 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-400';
+    }
+  };
+
+  // Load Pyodide for Python execution
+  const loadPyodide = async () => {
+    if (pyodide || pyodideLoading) return pyodide;
+    
+    try {
+      pyodideLoading = true;
+      console.log('🐍 Loading Pyodide...');
+      
+      // Dynamic import to avoid SSR issues
+      const { loadPyodide: loadPyodideFn } = await import('pyodide');
+      pyodide = await loadPyodideFn({
+        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+      });
+      
+      console.log('✅ Pyodide loaded successfully');
+      return pyodide;
+    } catch (error) {
+      console.error('❌ Failed to load Pyodide:', error);
+      return null;
+    } finally {
+      pyodideLoading = false;
+    }
+  };
+
+  // Execute Python code safely
+  const executePythonCode = async (code, testInput) => {
+    try {
+      const pyodideInstance = await loadPyodide();
+      if (!pyodideInstance) {
+        throw new Error('Failed to load Python interpreter');
+      }
+
+      // Create a safe execution environment
+      const safeCode = `
+import sys
+import json
+import traceback
+
+# Capture stdout
+from io import StringIO
+stdout_capture = StringIO()
+sys.stdout = stdout_capture
+
+try:
+    # User's code
+    ${code}
+    
+    # Test the function
+    result = solution(${JSON.stringify(testInput)})
+    
+    # Capture the result
+    output = {
+        "result": result,
+        "stdout": stdout_capture.getvalue(),
+        "success": True
+    }
+    print(json.dumps(output))
+    
+except Exception as e:
+    output = {
+        "error": str(e),
+        "traceback": traceback.format_exc(),
+        "stdout": stdout_capture.getvalue(),
+        "success": False
+    }
+    print(json.dumps(output))
+finally:
+    sys.stdout = sys.__stdout__
+`;
+
+      console.log('🐍 Executing Python code:', safeCode);
+      const result = await pyodideInstance.runPythonAsync(safeCode);
+      
+      // Parse the JSON output
+      const output = JSON.parse(result);
+      console.log('✅ Python execution result:', output);
+      
+      return output;
+    } catch (error) {
+      console.error('❌ Python execution error:', error);
+      return {
+        success: false,
+        error: error.message,
+        stdout: '',
+        result: null
+      };
     }
   };
 
@@ -379,12 +472,12 @@ int main() {
 
             <div className="flex space-x-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   console.log('🧪 Testing code execution...');
                   console.log('📝 Code:', code);
                   console.log('🌐 Language:', selectedLanguage);
                   
-                  // Simple code execution for testing
+                  // Code execution for testing
                   try {
                     if (selectedLanguage === 'javascript') {
                       // Create a safe execution environment
@@ -416,20 +509,49 @@ int main() {
                       };
                       
                       const result = safeEval(code);
-                      console.log('✅ Code executed successfully!');
+                      console.log('✅ JavaScript code executed successfully!');
                       console.log('📊 Result:', result);
                       
                       // Show result in a better way
                       setSubmissionResult({
-                        message: 'Code executed successfully!',
+                        message: 'JavaScript code executed successfully!',
                         result: result,
                         executionTime: Date.now(),
                         isPreview: true
                       });
+                    } else if (selectedLanguage === 'python') {
+                      // Execute Python code using Pyodide
+                      console.log('🐍 Executing Python code...');
+                      
+                      // Get a sample test input from the problem
+                      const testInput = problem.testCases && problem.testCases.length > 0 
+                        ? problem.testCases[0].input 
+                        : [1, 2, 3]; // Default test input
+                      
+                      const pythonResult = await executePythonCode(code, testInput);
+                      
+                      if (pythonResult.success) {
+                        console.log('✅ Python code executed successfully!');
+                        setSubmissionResult({
+                          message: 'Python code executed successfully!',
+                          result: pythonResult.result,
+                          stdout: pythonResult.stdout,
+                          executionTime: Date.now(),
+                          isPreview: true
+                        });
+                      } else {
+                        console.error('❌ Python execution failed:', pythonResult.error);
+                        setSubmissionResult({
+                          error: `Python execution error: ${pythonResult.error}`,
+                          stdout: pythonResult.stdout,
+                          traceback: pythonResult.traceback,
+                          isPreview: true
+                        });
+                      }
                     } else {
                       // For other languages, show a helpful message
                       setSubmissionResult({
-                        message: 'Code execution preview is only available for JavaScript.',
+                        message: `Code execution preview is only available for JavaScript and Python.`,
                         details: 'Use Submit Solution for full testing with all languages.',
                         isPreview: true
                       });
@@ -506,6 +628,22 @@ int main() {
                               <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-blue-800 dark:text-blue-200">
                                 {String(submissionResult.result)}
                               </code>
+                            </div>
+                          )}
+                          {submissionResult.stdout && (
+                            <div className="mt-2">
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Output: </span>
+                              <pre className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-blue-800 dark:text-blue-200 text-xs mt-1 overflow-x-auto">
+                                {submissionResult.stdout}
+                              </pre>
+                            </div>
+                          )}
+                          {submissionResult.traceback && (
+                            <div className="mt-2">
+                              <span className="text-sm font-medium text-red-700 dark:text-red-300">Traceback: </span>
+                              <pre className="bg-red-100 dark:bg-red-800 px-2 py-1 rounded text-red-800 dark:text-red-200 text-xs mt-1 overflow-x-auto">
+                                {submissionResult.traceback}
+                              </pre>
                             </div>
                           )}
                         </div>
