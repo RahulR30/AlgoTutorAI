@@ -320,6 +320,37 @@ int main() {
                   formatOnType: true,
                   suggestOnTriggerCharacters: true,
                   quickSuggestions: true,
+                  // Add more editor options for better experience
+                  tabSize: 2,
+                  insertSpaces: true,
+                  detectIndentation: true,
+                  trimAutoWhitespace: true,
+                  largeFileOptimizations: false,
+                  // Enable IntelliSense features
+                  suggest: {
+                    showKeywords: true,
+                    showSnippets: true,
+                    showClasses: true,
+                    showFunctions: true,
+                    showVariables: true,
+                    showConstants: true,
+                    showEnums: true,
+                    showInterfaces: true,
+                    showModules: true,
+                    showProperties: true,
+                    showEvents: true,
+                    showOperators: true,
+                    showUnits: true,
+                    showValues: true,
+                    showColors: true,
+                    showFiles: true,
+                    showReferences: true,
+                    showFolders: true,
+                    showTypeParameters: true,
+                    showWords: true,
+                    showUsers: true,
+                    showIssues: true,
+                  }
                 }}
                 placeholder="Write your solution here..."
                 loading={
@@ -328,23 +359,87 @@ int main() {
                     <span className="ml-2">Loading editor...</span>
                   </div>
                 }
+                onMount={(editor, monaco) => {
+                  console.log('✅ Monaco Editor mounted successfully');
+                  console.log('📝 Editor instance:', editor);
+                  console.log('🎨 Monaco instance:', monaco);
+                  
+                  // Configure editor after mount
+                  editor.focus();
+                  
+                  // Add some debugging
+                  window.monacoEditor = editor;
+                  window.monaco = monaco;
+                }}
+                onError={(error) => {
+                  console.error('❌ Monaco Editor error:', error);
+                }}
               />
             </div>
 
             <div className="flex space-x-3">
               <button
                 onClick={() => {
+                  console.log('🧪 Testing code execution...');
+                  console.log('📝 Code:', code);
+                  console.log('🌐 Language:', selectedLanguage);
+                  
                   // Simple code execution for testing
                   try {
                     if (selectedLanguage === 'javascript') {
-                      const result = eval(code);
-                      console.log('Code execution result:', result);
-                      alert(`Code executed successfully! Result: ${result}`);
+                      // Create a safe execution environment
+                      const safeEval = (code) => {
+                        // Remove potentially dangerous code
+                        const sanitizedCode = code
+                          .replace(/process\./g, '')
+                          .replace(/require\(/g, '')
+                          .replace(/import\s+/g, '')
+                          .replace(/eval\(/g, '')
+                          .replace(/Function\(/g, '');
+                        
+                        // Create a safe context
+                        const context = {
+                          console: {
+                            log: (...args) => console.log('Code output:', ...args),
+                            error: (...args) => console.error('Code error:', ...args),
+                            warn: (...args) => console.warn('Code warning:', ...args)
+                          },
+                          setTimeout: () => {},
+                          setInterval: () => {},
+                          clearTimeout: () => {},
+                          clearInterval: () => {}
+                        };
+                        
+                        // Execute in safe context
+                        const func = new Function('console', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', sanitizedCode);
+                        return func(context.console, context.setTimeout, context.setInterval, context.clearTimeout, context.clearInterval);
+                      };
+                      
+                      const result = safeEval(code);
+                      console.log('✅ Code executed successfully!');
+                      console.log('📊 Result:', result);
+                      
+                      // Show result in a better way
+                      setSubmissionResult({
+                        message: 'Code executed successfully!',
+                        result: result,
+                        executionTime: Date.now(),
+                        isPreview: true
+                      });
                     } else {
-                      alert('Code execution preview is only available for JavaScript. Use Submit Solution for full testing.');
+                      // For other languages, show a helpful message
+                      setSubmissionResult({
+                        message: 'Code execution preview is only available for JavaScript.',
+                        details: 'Use Submit Solution for full testing with all languages.',
+                        isPreview: true
+                      });
                     }
                   } catch (error) {
-                    alert(`Code execution error: ${error.message}`);
+                    console.error('❌ Code execution error:', error);
+                    setSubmissionResult({
+                      error: `Code execution error: ${error.message}`,
+                      isPreview: true
+                    });
                   }
                 }}
                 className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
@@ -376,7 +471,9 @@ int main() {
           {/* Submission Result */}
           {submissionResult && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Submission Result</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                {submissionResult.isPreview ? 'Code Test Result' : 'Submission Result'}
+              </h3>
               
               {submissionResult.error ? (
                 <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
@@ -385,52 +482,83 @@ int main() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Overall Result Status */}
-                  {submissionResult.submission?.overallResult ? (
-                    <div className={`flex items-center space-x-3 p-6 rounded-lg ${
-                      isSolutionCorrect(submissionResult.submission)
-                        ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800'
-                    }`}>
-                      {isSolutionCorrect(submissionResult.submission) ? (
-                        <>
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center">
-                              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  {/* Preview Result */}
+                  {submissionResult.isPreview ? (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                            <Play className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-blue-800 dark:text-blue-200">
+                            {submissionResult.message}
+                          </h4>
+                          {submissionResult.details && (
+                            <p className="text-blue-700 dark:text-blue-300">
+                              {submissionResult.details}
+                            </p>
+                          )}
+                          {submissionResult.result !== undefined && (
+                            <div className="mt-2">
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Result: </span>
+                              <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-blue-800 dark:text-blue-200">
+                                {String(submissionResult.result)}
+                              </code>
                             </div>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold text-green-800 dark:text-green-200">🎉 Solution Correct!</h3>
-                            <p className="text-green-700 dark:text-green-300">Congratulations! All test cases passed successfully.</p>
-                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                              You've solved this problem correctly!
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
-                              <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold text-red-800 dark:text-red-200">❌ Solution Incorrect</h3>
-                            <p className="text-red-700 dark:text-red-300">
-                              {submissionResult.submission.overallResult.passedTestCases} out of {submissionResult.submission.overallResult.totalTestCases} test cases passed.
-                            </p>
-                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                              Keep trying! Review the failed test cases below.
-                            </p>
-                          </div>
-                        </>
-                      )}
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-medium">Solution submitted successfully!</span>
-                    </div>
+                    /* Actual Submission Result */
+                    submissionResult.submission?.overallResult ? (
+                      <div className={`flex items-center space-x-3 p-6 rounded-lg ${
+                        isSolutionCorrect(submissionResult.submission)
+                          ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800'
+                      }`}>
+                        {isSolutionCorrect(submissionResult.submission) ? (
+                          <>
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center">
+                                <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold text-green-800 dark:text-green-200">🎉 Solution Correct!</h3>
+                              <p className="text-green-700 dark:text-green-300">Congratulations! All test cases passed successfully.</p>
+                              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                                You've solved this problem correctly!
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
+                                <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold text-red-800 dark:text-red-200">❌ Solution Incorrect</h3>
+                              <p className="text-red-700 dark:text-red-300">
+                                {submissionResult.submission.overallResult.passedTestCases} out of {submissionResult.submission.overallResult.totalTestCases} test cases passed.
+                              </p>
+                              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                                Keep trying! Review the failed test cases below.
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium">Solution submitted successfully!</span>
+                      </div>
+                    )
                   )}
 
                   {/* Detailed Results */}
