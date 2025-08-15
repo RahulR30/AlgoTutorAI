@@ -36,16 +36,12 @@ Your repository is already prepared with:
 - **Environment**: `Node`
 - **Region**: Choose closest to your users
 - **Branch**: `main`
-
-**Important**: After creating the service, you'll set the build and start commands in the next step!
-
-### 4. **Set Build and Start Commands**
-After creating the service, go to the "Settings" tab and set:
-
 - **Build Command**: `cd backend && npm install`
 - **Start Command**: `cd backend && npm start`
 
-### 5. **Set Environment Variables**
+**Important**: These commands are set during service creation, not after!
+
+### 4. **Set Environment Variables**
 Click "Environment" tab and add:
 
 ```
@@ -67,26 +63,19 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 This will generate a secure 128-character random string.
 
-### 6. **Deploy**
+### 5. **Deploy**
 - Click "Create Web Service"
 - Render will automatically build and deploy your app
 - Wait for the build to complete (usually 2-5 minutes)
 
-## 🔧 **Where to Find Settings in Render**
+## 🔧 **Where to Find Environment Variables in Render**
 
 After creating your service:
 
-1. **Build/Start Commands**: 
-   - Go to your service dashboard
-   - Click "Settings" tab
-   - Scroll down to "Build & Deploy" section
-   - Set Build Command and Start Command
-
-2. **Environment Variables**:
-   - Go to your service dashboard  
-   - Click "Environment" tab
-   - Click "Add Environment Variable"
-   - Add each variable one by one
+1. **Go to your service dashboard**
+2. **Click "Environment" tab**
+3. **Click "Add Environment Variable"**
+4. **Add each variable one by one**
 
 ## 🌐 **Step 3: Update Frontend Configuration**
 
@@ -101,7 +90,7 @@ Update your frontend API configuration to use this URL instead of localhost.
 2. **Test API**: Try your endpoints
 3. **Check Logs**: Monitor the deployment in Render dashboard
 
-## 📱 **Step 5: Deploy Frontend to Vercel**
+## 📱 **Step 4: Deploy Frontend to Vercel**
 
 ### 1. **Sign Up for Vercel**
 - Go to [vercel.com](https://vercel.com)
