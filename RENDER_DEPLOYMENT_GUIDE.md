@@ -83,30 +83,37 @@ This will generate a secure 128-character random string.
 2. **Environment**: Should show "Node" (not Docker)
 3. **Region**: Choose closest to you
 4. **Branch**: `main`
-5. **Build Command**: `cd backend && npm install`
-6. **Start Command**: `cd backend && npm start`
 
-### **Step 3: Set Environment Variables**
+**Note**: Build and start commands will be configured after service creation
+
+### **Step 3: Configure Build & Start Commands**
 After creating the service:
 1. **Go to your service dashboard**
-2. **Click "Environment" tab**
-3. **Click "Add Environment Variable"**
-4. **Add each variable one by one**
+2. **Click "Settings" tab**
+3. **Scroll down to "Build & Deploy" section**
+4. **Set Build Command**: `cd backend && npm install`
+5. **Set Start Command**: `cd backend && npm start`
 
-## 🌐 **Step 3: Update Frontend Configuration**
+### **Step 4: Set Environment Variables**
+After configuring build commands:
+1. **Go to "Environment" tab**
+2. **Click "Add Environment Variable"**
+3. **Add each variable one by one**
+
+## 🌐 **Step 5: Update Frontend Configuration**
 
 Once deployed, Render will give you a URL like:
 `https://algotutor-backend.onrender.com`
 
 Update your frontend API configuration to use this URL instead of localhost.
 
-## 🔧 **Step 4: Test Your Deployment**
+## 🔧 **Step 6: Test Your Deployment**
 
 1. **Health Check**: Visit `https://algotutor-backend.onrender.com/api/health`
 2. **Test API**: Try your endpoints
 3. **Check Logs**: Monitor the deployment in Render dashboard
 
-## 📱 **Step 4: Deploy Frontend to Vercel**
+## 📱 **Step 7: Deploy Frontend to Vercel**
 
 ### 1. **Sign Up for Vercel**
 - Go to [vercel.com](https://vercel.com)
@@ -171,6 +178,12 @@ Both Render and Vercel will automatically redeploy when you push to GitHub!
 2. **Start over** and make sure to select "Web Service"
 3. **Verify** the environment shows "Node" not "Docker"
 4. **Check** that you're not in the wrong section of Render
+
+### **If You Can't Find Build/Start Commands:**
+1. **Make sure you're in the "Settings" tab**
+2. **Scroll down** to find "Build & Deploy" section
+3. **Look for** "Build Command" and "Start Command" fields
+4. **If still not visible**, try refreshing the page or check if you're in the right service type
 
 ### Support:
 - Render: Excellent documentation and support
