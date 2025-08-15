@@ -36,24 +36,57 @@ Your repository is already prepared with:
 - **Environment**: `Node`
 - **Region**: Choose closest to your users
 - **Branch**: `main`
+
+**Important**: After creating the service, you'll set the build and start commands in the next step!
+
+### 4. **Set Build and Start Commands**
+After creating the service, go to the "Settings" tab and set:
+
 - **Build Command**: `cd backend && npm install`
 - **Start Command**: `cd backend && npm start`
 
-### 4. **Set Environment Variables**
+### 5. **Set Environment Variables**
 Click "Environment" tab and add:
 
 ```
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret_key
+MONGODB_URI=mongodb+srv://your_username:your_password@your_cluster.mongodb.net/algotutor-ai?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key_here_make_it_long_and_random
 CLIENT_URL=https://your-frontend-domain.vercel.app
 ```
 
-### 5. **Deploy**
+**Important Notes:**
+- **MONGODB_URI**: Get this from your MongoDB Atlas dashboard
+- **JWT_SECRET**: Generate a random string (at least 32 characters)
+- **CLIENT_URL**: Update this after you deploy your frontend to Vercel
+
+**To generate a JWT_SECRET, run this in your terminal:**
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+This will generate a secure 128-character random string.
+
+### 6. **Deploy**
 - Click "Create Web Service"
 - Render will automatically build and deploy your app
 - Wait for the build to complete (usually 2-5 minutes)
+
+## 🔧 **Where to Find Settings in Render**
+
+After creating your service:
+
+1. **Build/Start Commands**: 
+   - Go to your service dashboard
+   - Click "Settings" tab
+   - Scroll down to "Build & Deploy" section
+   - Set Build Command and Start Command
+
+2. **Environment Variables**:
+   - Go to your service dashboard  
+   - Click "Environment" tab
+   - Click "Add Environment Variable"
+   - Add each variable one by one
 
 ## 🌐 **Step 3: Update Frontend Configuration**
 
