@@ -7,9 +7,13 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import routes
+console.log('🔍 Loading route files...');
 const authRoutes = require('./routes/auth');
+console.log('✅ Auth routes loaded');
 const problemRoutes = require('./routes/problems');
+console.log('✅ Problem routes loaded');
 const userRoutes = require('./routes/users');
+console.log('✅ User routes loaded');
 
 // Import MongoDB connection
 const connectDB = require('./config/db');
@@ -84,9 +88,13 @@ app.use(cors({
 app.use(morgan('combined'));
 
 // API routes
+console.log('🔍 Registering API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes registered at /api/auth');
 app.use('/api/problems', problemRoutes);
+console.log('✅ Problem routes registered at /api/problems');
 app.use('/api/users', userRoutes);
+console.log('✅ User routes registered at /api/users');
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
