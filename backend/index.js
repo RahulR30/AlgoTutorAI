@@ -165,7 +165,7 @@ const startServer = async () => {
       
       if (process.env.MONGODB_URI) {
         console.log(`🔧 Running with FULL FUNCTIONALITY (MongoDB mode)`);
-        console.log(`🎯 Features: Real code execution, AI analysis, Progress tracking`);
+        console.log(`🎯 Features: Real code execution, Progress tracking`);
         console.log(`🗄️  Database: MongoDB Atlas (Cloud)`);
       } else {
         console.log(`⚠️  Running in LIMITED mode - MongoDB not configured`);
