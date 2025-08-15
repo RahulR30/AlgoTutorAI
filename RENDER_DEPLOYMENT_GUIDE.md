@@ -31,6 +31,8 @@ Your repository is already prepared with:
 - Connect your GitHub repository: `RahulR30/AlgoTutorAI`
 - Select the repository
 
+**IMPORTANT**: Make sure you select "Web Service" and NOT "Static Site" or "Background Worker"
+
 ### 3. **Configure the Service**
 - **Name**: `algotutor-backend`
 - **Environment**: `Node`
@@ -68,10 +70,24 @@ This will generate a secure 128-character random string.
 - Render will automatically build and deploy your app
 - Wait for the build to complete (usually 2-5 minutes)
 
-## 🔧 **Where to Find Environment Variables in Render**
+## 🔧 **Step-by-Step Render Setup**
 
-After creating your service:
+### **Step 1: Create Service**
+1. Click "New +" button
+2. Select **"Web Service"** (NOT Static Site!)
+3. Connect your GitHub repo
+4. Select `RahulR30/AlgoTutorAI`
 
+### **Step 2: Configure Service**
+1. **Name**: `algotutor-backend`
+2. **Environment**: Should show "Node" (not Docker)
+3. **Region**: Choose closest to you
+4. **Branch**: `main`
+5. **Build Command**: `cd backend && npm install`
+6. **Start Command**: `cd backend && npm start`
+
+### **Step 3: Set Environment Variables**
+After creating the service:
 1. **Go to your service dashboard**
 2. **Click "Environment" tab**
 3. **Click "Add Environment Variable"**
@@ -144,10 +160,17 @@ Both Render and Vercel will automatically redeploy when you push to GitHub!
 ## 🆘 **Troubleshooting**
 
 ### Common Issues:
-1. **Build fails**: Check Render logs for errors
-2. **Environment variables**: Ensure all required vars are set
-3. **MongoDB connection**: Verify your Atlas connection string
-4. **CORS issues**: Check CLIENT_URL environment variable
+1. **Docker error**: If you see "failed to read dockerfile", make sure you selected "Web Service" and not "Static Site"
+2. **Build fails**: Check Render logs for errors
+3. **Environment variables**: Ensure all required vars are set
+4. **MongoDB connection**: Verify your Atlas connection string
+5. **CORS issues**: Check CLIENT_URL environment variable
+
+### **If You Still Get Docker Errors:**
+1. **Delete the service** you just created
+2. **Start over** and make sure to select "Web Service"
+3. **Verify** the environment shows "Node" not "Docker"
+4. **Check** that you're not in the wrong section of Render
 
 ### Support:
 - Render: Excellent documentation and support
