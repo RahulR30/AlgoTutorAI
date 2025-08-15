@@ -39,6 +39,9 @@ if (!process.env.JWT_SECRET) {
   console.warn('   Please set JWT_SECRET in Railway environment variables.');
 }
 
+// Trust proxy for rate limiting (important for Render)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(compression());
@@ -47,7 +50,9 @@ app.use(compression());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 app.use('/api/', limiter);
 
@@ -71,6 +76,12 @@ app.use(cors({
     
     // Allow localhost for development
     if (origin === 'http://localhost:3000' || origin === 'http://localhost:3000/') {
+      return callback(null, true);
+    }
+    
+    // Allow Vercel preview URLs (for development/testing)
+    if (origin.includes('vercel.app') && origin.includes('algo-tutor')) {
+      console.log('✅ Allowing Vercel preview URL:', origin);
       return callback(null, true);
     }
     
