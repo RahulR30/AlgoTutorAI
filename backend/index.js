@@ -10,7 +10,6 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const problemRoutes = require('./routes/problems');
 const userRoutes = require('./routes/users');
-const aiRoutes = require('./routes/ai');
 
 // Import MongoDB connection
 const connectDB = require('./config/db');
@@ -88,7 +87,6 @@ app.use(morgan('combined'));
 app.use('/api/auth', authRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/ai', aiRoutes);
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
