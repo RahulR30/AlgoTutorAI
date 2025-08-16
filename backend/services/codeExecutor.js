@@ -196,13 +196,17 @@ int main() {
       return 'maxSubArray(input["nums"])';
     } else if (input.n !== undefined) {
       return 'climbStairs(input["n"])';
+    } else if (Array.isArray(input)) {
+      // For array inputs, pass the array directly
+      return `solution(${this.pythonValueToString(input)})`;
     }
     return 'solution(input)';
   }
 
   getJavaScriptArguments(input) {
     if (Array.isArray(input)) {
-      return input.map(arg => JSON.stringify(arg)).join(', ');
+      // For arrays, pass as a single argument, not comma-separated
+      return JSON.stringify(input);
     } else if (typeof input === 'object' && input !== null) {
       return Object.entries(input).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(', ');
     } else {
@@ -212,7 +216,8 @@ int main() {
 
   getPythonArguments(input) {
     if (Array.isArray(input)) {
-      return input.map(arg => this.pythonValueToString(arg)).join(', ');
+      // For arrays, pass as a single argument, not comma-separated
+      return this.pythonValueToString(input);
     } else if (typeof input === 'object' && input !== null) {
       return Object.entries(input).map(([key, value]) => `${key}=${this.pythonValueToString(value)}`).join(', ');
     } else {
