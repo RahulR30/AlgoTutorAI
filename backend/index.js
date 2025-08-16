@@ -98,6 +98,12 @@ app.use(cors({
 // Logging middleware
 app.use(morgan('combined'));
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`🔍 ${req.method} ${req.url} - Origin: ${req.headers.origin || 'none'}`);
+  next();
+});
+
 // API routes
 console.log('🔍 Registering API routes...');
 app.use('/api/auth', authRoutes);
@@ -106,6 +112,28 @@ app.use('/api/problems', problemRoutes);
 console.log('✅ Problem routes registered at /api/problems');
 app.use('/api/users', userRoutes);
 console.log('✅ User routes registered at /api/users');
+
+// Root route handler
+app.get('/', (req, res) => {
+  console.log('🏠 Root route hit');
+  res.json({ 
+    message: 'AlgoTutorAI Backend API',
+    version: '1.0.0',
+    status: 'running',
+    availableRoutes: ['/api/auth', '/api/problems', '/api/users', '/api/health', '/api/debug'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug route to test if routes are working
+app.get('/api/debug', (req, res) => {
+  console.log('🔍 Debug route hit - routes are working!');
+  res.json({ 
+    message: 'Debug route working!',
+    routes: ['/api/auth', '/api/problems', '/api/users', '/api/health'],
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -150,16 +178,23 @@ app.get('/api/health', async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Error middleware caught:', err.message);
+  console.error('❌ Error stack:', err.stack);
   res.status(500).json({ 
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
-// 404 handler
+// 404 handler - must be last!
 app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  console.log(`🚫 404 - Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({ 
+    error: 'Route not found',
+    method: req.method,
+    url: req.url,
+    availableRoutes: ['/api/auth', '/api/problems', '/api/users', '/api/health', '/api/debug']
+  });
 });
 
 // Start server
