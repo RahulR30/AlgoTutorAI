@@ -216,7 +216,7 @@ JWT_SECRET=your-production-jwt-secret
 CLIENT_URL=https://yourdomain.com
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
