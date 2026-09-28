@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Clock, Star } from 'lucide-react';
+import { Search, Clock, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { problemsAPI } from '../../services/api';
 

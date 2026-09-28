@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, []);
+  }, [state.token]);
 
   // Set auth token in localStorage when it changes
   useEffect(() => {
