@@ -11,9 +11,11 @@ export default function TopicsPage() {
     {isLoading && <p>Loading topics…</p>}
     {isError && <p role="alert">Could not load topics. Please check the API connection.</p>}
     {data?.topics.length === 0 && <p>No topics yet. Start the seeded demo to explore examples.</p>}
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{data?.topics.map(t => <Link className="border rounded p-4 hover:border-blue-500" key={t.name} to={`/topics/${encodeURIComponent(t.name)}`}>
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{data?.topics.map(t => {
+      const counts = (Array.isArray(t.counts) ? t.counts[0] : t.counts) || {};
+      return <Link className="border rounded p-4 hover:border-blue-500" key={t.name} to={`/topics/${encodeURIComponent(t.name)}`}>
       <h2 className="text-xl font-semibold capitalize">{t.name.replace(/-/g, ' ')}</h2>
-      <p>{t.total} problems</p><p>Easy: {t.counts.easy} · Medium: {t.counts.medium} · Hard: {t.counts.hard}</p>
-    </Link>)}</div>
+      <p>{t.total} problems</p><p>Easy: {counts.easy || 0} · Medium: {counts.medium || 0} · Hard: {counts.hard || 0}</p>
+    </Link>; })}</div>
   </section>;
 }

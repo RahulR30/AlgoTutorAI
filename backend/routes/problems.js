@@ -223,7 +223,7 @@ router.get('/topics/list', async (req, res) => {
         $group: {
           _id: '$topics',
           total: { $sum: 1 },
-          counts: {
+          difficulties: {
             $push: '$difficulty'
           }
         }
@@ -234,9 +234,9 @@ router.get('/topics/list', async (req, res) => {
           displayName: { $toUpper: { $substr: ['$_id', 0, 1] } },
           total: 1,
           counts: {
-            easy: { $size: { $filter: { input: '$counts', cond: { $eq: ['$$this', 'easy'] } } } },
-            medium: { $size: { $filter: { input: '$counts', cond: { $eq: ['$$this', 'medium'] } } } },
-            hard: { $size: { $filter: { input: '$counts', cond: { $eq: ['$$this', 'hard'] } } } }
+            easy: { $size: { $filter: { input: '$difficulties', cond: { $eq: ['$$this', 'easy'] } } } },
+            medium: { $size: { $filter: { input: '$difficulties', cond: { $eq: ['$$this', 'medium'] } } } },
+            hard: { $size: { $filter: { input: '$difficulties', cond: { $eq: ['$$this', 'hard'] } } } }
           }
         }
       },

@@ -43,6 +43,8 @@ test('signup, login, submission, history and progress share the same database', 
   token = login.token;
   assert.equal((await request('/users/profile')).user.username, 'testlearner');
   for (const route of ['/problems/random', '/problems/popular', '/problems/recent', '/problems/topic/arrays', '/problems/difficulty/easy', '/problems/topics/list']) await request(route);
+  const topics = (await request('/problems/topics/list')).topics;
+  assert.deepEqual(topics.find(t => t.name === 'arrays').counts, { easy: 1, medium: 0, hard: 0 });
   const code = 'function twoSum(nums, target) { for (let i=0;i<nums.length;i++) for(let j=i+1;j<nums.length;j++) if(nums[i]+nums[j]===target) return [i,j]; }';
   for (let i = 0; i < 2; i++) {
     const result = await request(`/problems/${problem.id}/submit`, 'POST', { language: 'javascript', code });
