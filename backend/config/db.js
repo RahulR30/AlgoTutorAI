@@ -7,14 +7,14 @@ const connectDB = async () => {
     // Debug the connection string
     console.log('🔍 MongoDB Connection Debug:');
     console.log('   MONGODB_URI length:', mongoURI ? mongoURI.length : 'undefined');
-    console.log('   MONGODB_URI starts with:', mongoURI ? mongoURI.substring(0, 20) + '...' : 'undefined');
+
     
     if (!mongoURI) {
       throw new Error('MONGODB_URI environment variable is not set');
     }
     
     if (!mongoURI.startsWith('mongodb://') && !mongoURI.startsWith('mongodb+srv://')) {
-      throw new Error(`Invalid MongoDB URI format. Expected "mongodb://" or "mongodb+srv://", got: ${mongoURI.substring(0, 20)}...`);
+      throw new Error('Invalid MongoDB URI format. Expected mongodb:// or mongodb+srv://');
     }
     
     const conn = await mongoose.connect(mongoURI, {

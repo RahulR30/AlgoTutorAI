@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
+const { isDeepStrictEqual } = require('node:util');
 
 class CodeExecutor {
   constructor() {
@@ -384,31 +385,18 @@ int main() {
   }
 
   compareOutput(actual, expected) {
-    if (actual === expected) return true;
-    
-    // Handle array comparison
-    if (Array.isArray(actual) && Array.isArray(expected)) {
-      if (actual.length !== expected.length) return false;
-      return actual.every((val, index) => val === expected[index]);
-    }
-    
-    // Handle object comparison for some cases
-    if (typeof actual === 'object' && typeof expected === 'object') {
-      return JSON.stringify(actual) === JSON.stringify(expected);
-    }
-    
-    return false;
+    return isDeepStrictEqual(actual, expected);
   }
 
   calculateOverallResult(results) {
     const totalTestCases = results.length;
     const passedTestCases = results.filter(r => r.isCorrect).length;
     const totalExecutionTime = results.reduce((sum, r) => sum + r.executionTime, 0);
-    const averageExecutionTime = totalExecutionTime / totalTestCases;
-    const score = Math.round((passedTestCases / totalTestCases) * 100);
+    const averageExecutionTime = totalTestCases ? totalExecutionTime / totalTestCases : 0;
+    const score = totalTestCases ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
     
     return {
-      isCorrect: passedTestCases === totalTestCases,
+      isCorrect: totalTestCases > 0 && passedTestCases === totalTestCases,
       totalTestCases,
       passedTestCases,
       executionTime: averageExecutionTime,

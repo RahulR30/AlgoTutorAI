@@ -192,6 +192,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser: user => dispatch({ type: 'UPDATE_USER', payload: user }),
     updateProfile,
     updatePreferences,
     clearError

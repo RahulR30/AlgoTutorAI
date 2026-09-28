@@ -158,7 +158,7 @@ app.get('/api/health', async (req, res) => {
       mode: 'mongodb',
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV || 'development',
-      mongoConnected: !!process.env.MONGODB_URI,
+      mongoConnected: require('mongoose').connection.readyState === 1,
       jwtConfigured: !!process.env.JWT_SECRET,
       python: pythonStatus
     });
@@ -169,7 +169,7 @@ app.get('/api/health', async (req, res) => {
       mode: 'mongodb',
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV || 'development',
-      mongoConnected: !!process.env.MONGODB_URI,
+      mongoConnected: require('mongoose').connection.readyState === 1,
       jwtConfigured: !!process.env.JWT_SECRET,
       python: { available: false, error: 'Health check failed', version: null }
     });
@@ -200,6 +200,9 @@ app.use('*', (req, res) => {
 // Start server
 const startServer = async () => {
   try {
+    if (!process.env.JWT_SECRET || !process.env.MONGODB_URI) {
+      throw new Error('Set JWT_SECRET and MONGODB_URI, or use npm run demo for an isolated local demo.');
+    }
     console.log('🚀 Starting AlgoTutorAI Server...');
     
     // Only try to connect to MongoDB if URI is provided
@@ -232,16 +235,9 @@ const startServer = async () => {
     console.error('❌ Error details:', error.message);
     console.error('❌ Error stack:', error.stack);
     
-    // Don't exit if it's just a MongoDB connection issue
-    if (error.message.includes('MongoDB') || error.message.includes('connect')) {
-      console.log('⚠️  Starting server without MongoDB connection...');
-      app.listen(PORT, () => {
-        console.log(`🚀 AlgoTutorAI Server running on port ${PORT} (Limited Mode)`);
-        console.log(`🌐 Health check available at: http://localhost:${PORT}/api/health`);
-      });
-    } else {
-      process.exit(1);
-    }
+    await require('mongoose').disconnect();
+    process.exitCode = 1;
+
   }
 };
 
@@ -256,4 +252,6 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-startServer();
+if (require.main === module) startServer();
+
+module.exports = app;

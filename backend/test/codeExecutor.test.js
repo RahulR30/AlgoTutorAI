@@ -92,3 +92,16 @@ test('unexpected execution failures still clean up temporary files', async () =>
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test('nested arrays and objects compare structurally', () => {
+  assert.equal(executor.compareOutput([[1, 2], [3]], [[1, 2], [3]]), true);
+  assert.equal(executor.compareOutput({ a: 1, b: [2] }, { b: [2], a: 1 }), true);
+  assert.equal(executor.compareOutput([[1, 2]], [[2, 1]]), false);
+});
+
+test('an empty test suite cannot award a passing grade', () => {
+  const result = executor.calculateOverallResult([]);
+  assert.equal(result.isCorrect, false);
+  assert.equal(result.score, 0);
+  assert.equal(result.executionTime, 0);
+});

@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Editor } from '@monaco-editor/react';
-import { 
-  ArrowLeft, 
-  Code, 
-  Play, 
-  CheckCircle, 
+import {
+  ArrowLeft,
+  Code,
+  Play,
+  CheckCircle,
   XCircle,
   Clock,
   Users,
@@ -17,15 +17,11 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { problemsAPI } from '../../services/api';
-
-// Python interpreter for frontend execution
-let pyodide = null;
-let pyodideLoading = false;
+import { problemsAPI, authAPI } from '../../services/api';
 
 const ProblemDetailPage = () => {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { token, updateUser } = useAuth();
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState('javascript');
@@ -39,7 +35,7 @@ const ProblemDetailPage = () => {
 
   useEffect(() => {
     if (problem) {
-      setCode(getStarterCode(selectedLanguage));
+      setCode(problem.starterCode?.[selectedLanguage] || getStarterCode(selectedLanguage));
     }
   }, [problem, selectedLanguage]);
 
@@ -50,7 +46,7 @@ const ProblemDetailPage = () => {
       const data = response.data;
       console.log('✅ Problem data received:', data);
       setProblem(data.problem);
-      
+
       // Set initial code based on selected language
       if (data.problem.starterCode) {
         setCode(data.problem.starterCode[selectedLanguage] || '');
@@ -70,22 +66,20 @@ const ProblemDetailPage = () => {
   // Example: return input * 2;
 }
 
-// Test your solution
-console.log(solution(5));`,
+`,
       python: `def solution(input):
     # Write your solution here
     # Example: return input * 2
     pass
 
-# Test your solution
-print(solution(5))`,
+`,
       java: `public class Solution {
     public static int solution(int input) {
         // Write your solution here
         // Example: return input * 2;
         return 0;
     }
-    
+
     public static void main(String[] args) {
         System.out.println(solution(5));
     }
@@ -144,8 +138,10 @@ int main() {
         language: selectedLanguage,
         code: code
       });
-      
+
       const result = response.data;
+      const profile = await authAPI.getProfile();
+      updateUser(profile.data.user);
       console.log('✅ Submission result:', result);
       console.log('📊 Result structure:', {
         hasSubmission: !!result.submission,
@@ -155,7 +151,7 @@ int main() {
         overallResultKeys: result.submission?.overallResult ? Object.keys(result.submission.overallResult) : [],
         executionResultsLength: result.submission?.executionResults?.length || 0
       });
-      
+
       // Ensure we have the expected structure
       if (!result.submission || !result.submission.overallResult) {
         console.warn('⚠️ Submission result missing expected structure:', result);
@@ -182,7 +178,7 @@ int main() {
     } catch (error) {
       console.error('❌ Error submitting solution:', error);
       console.error('   Error details:', error.response?.data || error.message);
-      
+
       if (error.response?.status === 401) {
         setSubmissionResult({ error: 'Authentication failed. Please login again.' });
       } else {
@@ -199,214 +195,6 @@ int main() {
       case 'medium': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-400';
       case 'hard': return 'text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400';
       default: return 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-400';
-    }
-  };
-
-  // Load Pyodide for Python execution
-  const loadPyodide = async () => {
-    if (pyodide || pyodideLoading) return pyodide;
-    
-    try {
-      pyodideLoading = true;
-      console.log('🐍 Loading Pyodide...');
-      
-      // Dynamic import to avoid SSR issues
-      const { loadPyodide: loadPyodideFn } = await import('pyodide');
-      pyodide = await loadPyodideFn({
-        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
-      });
-      
-      console.log('✅ Pyodide loaded successfully');
-      return pyodide;
-    } catch (error) {
-      console.error('❌ Failed to load Pyodide:', error);
-      return null;
-    } finally {
-      pyodideLoading = false;
-    }
-  };
-
-  // Execute Python code safely
-  const executePythonCode = async (code, testInput) => {
-    try {
-      console.log('🐍 Starting Python execution...');
-      console.log('📝 Code to execute:', code);
-      console.log('🧪 Test input:', testInput);
-      
-      const pyodideInstance = await loadPyodide();
-      if (!pyodideInstance) {
-        throw new Error('Failed to load Python interpreter');
-      }
-
-      // Detect function name from code
-      const functionMatch = code.match(/def\s+(\w+)\s*\(/);
-      const functionName = functionMatch ? functionMatch[1] : 'solution';
-      console.log('🔍 Detected function name:', functionName);
-
-      // Parse test input properly
-      let parsedInput = testInput;
-      if (typeof testInput === 'string') {
-        try {
-          parsedInput = JSON.parse(testInput);
-        } catch (e) {
-          // Handle array format like "[1,2,3]"
-          if (testInput.startsWith('[') && testInput.endsWith(']')) {
-            parsedInput = testInput.slice(1, -1).split(',').map(x => {
-              const trimmed = x.trim();
-              if (trimmed === 'true') return 'True';
-              if (trimmed === 'false') return 'False';
-              if (trimmed === 'null') return 'None';
-              if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
-              if (trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.slice(1, -1);
-              const num = Number(trimmed);
-              return isNaN(num) ? trimmed : num;
-            });
-          }
-        }
-      }
-      console.log('🔧 Parsed input:', parsedInput);
-
-      // Create a safe execution environment
-      const safeCode = `
-import sys
-import json
-import traceback
-
-# Capture stdout
-from io import StringIO
-stdout_capture = StringIO()
-sys.stdout = stdout_capture
-
-try:
-    # User's code
-    ${code}
-    
-    # Test the function
-    print("Testing function: ${functionName}")
-    print("Input:", ${JSON.stringify(parsedInput)})
-    
-    result = ${functionName}(${JSON.stringify(parsedInput)})
-    print("Result:", result)
-    
-    # Capture the result
-    output = {
-        "result": result,
-        "stdout": stdout_capture.getvalue(),
-        "success": True
-    }
-    print("Final output:", json.dumps(output))
-    
-except Exception as e:
-    print("Error occurred:", str(e))
-    print("Traceback:", traceback.format_exc())
-    output = {
-        "error": str(e),
-        "traceback": traceback.format_exc(),
-        "stdout": stdout_capture.getvalue(),
-        "success": False
-    }
-    print("Error output:", json.dumps(output))
-finally:
-    sys.stdout = sys.__stdout__
-`;
-
-      console.log('🐍 Executing Python code:', safeCode);
-      const result = await pyodideInstance.runPythonAsync(safeCode);
-      
-      console.log('📤 Raw Python output:', result);
-      
-      // Parse the JSON output
-      let output;
-      try {
-        output = JSON.parse(result);
-        console.log('✅ Parsed Python execution result:', output);
-      } catch (parseError) {
-        console.error('❌ Failed to parse Python output:', parseError);
-        console.log('Raw output was:', result);
-        
-        // Try to extract useful information from raw output
-        output = {
-          success: false,
-          error: 'Failed to parse Python output',
-          stdout: result,
-          result: null,
-          rawOutput: result
-        };
-      }
-      
-      return output;
-    } catch (error) {
-      console.error('❌ Python execution error:', error);
-      return {
-        success: false,
-        error: error.message,
-        stdout: '',
-        result: null
-      };
-    }
-  };
-
-  // Fallback Python execution method (simpler, for debugging)
-  const executePythonCodeSimple = async (code, testInput) => {
-    try {
-      console.log('🐍 Using simple Python execution fallback...');
-      
-      // Detect function name from code
-      const functionMatch = code.match(/def\s+(\w+)\s*\(/);
-      const functionName = functionMatch ? functionMatch[1] : 'solution';
-      console.log('🔍 Detected function name:', functionName);
-      
-      // Parse test input
-      let parsedInput = testInput;
-      if (typeof testInput === 'string') {
-        try {
-          parsedInput = JSON.parse(testInput);
-        } catch (e) {
-          if (testInput.startsWith('[') && testInput.endsWith(']')) {
-            parsedInput = testInput.slice(1, -1).split(',').map(x => {
-              const trimmed = x.trim();
-              if (trimmed === 'true') return true;
-              if (trimmed === 'false') return false;
-              if (trimmed === 'null') return null;
-              if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
-              if (trimmed.startsWith("'") && trimmed.endsWith("'")) return trimmed.slice(1, -1);
-              const num = Number(trimmed);
-              return isNaN(num) ? trimmed : num;
-            });
-          }
-        }
-      }
-      
-      // Create a very simple test
-      const testCode = `
-${code}
-
-# Test the function
-test_input = ${JSON.stringify(parsedInput)}
-print(f"Testing {functionName} with input: {test_input}")
-result = ${functionName}(test_input)
-print(f"Result: {result}")
-print(f"Type: {type(result)}")
-`;
-      
-      console.log('🐍 Simple test code:', testCode);
-      
-      // For now, just return a mock result to test the flow
-      return {
-        success: true,
-        result: `Mock result for ${functionName}(${JSON.stringify(parsedInput)})`,
-        stdout: `Testing ${functionName} with input: ${JSON.stringify(parsedInput)}\nResult: Mock result\nType: <class 'str'>`,
-        isMock: true
-      };
-      
-    } catch (error) {
-      console.error('❌ Simple Python execution error:', error);
-      return {
-        success: false,
-        error: error.message,
-        stdout: '',
-        result: null
-      };
     }
   };
 
@@ -458,7 +246,7 @@ print(f"Type: {type(result)}")
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
             <div className="flex items-center space-x-1">
               <Users className="w-4 h-4" />
@@ -536,8 +324,8 @@ print(f"Type: {type(result)}")
               >
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
+
+
               </select>
             </div>
 
@@ -606,10 +394,10 @@ print(f"Type: {type(result)}")
                   console.log('✅ Monaco Editor mounted successfully');
                   console.log('📝 Editor instance:', editor);
                   console.log('🎨 Monaco instance:', monaco);
-                  
+
                   // Configure editor after mount
                   editor.focus();
-                  
+
                   // Add some debugging
                   window.monacoEditor = editor;
                   window.monaco = monaco;
@@ -621,113 +409,6 @@ print(f"Type: {type(result)}")
             </div>
 
             <div className="flex space-x-3">
-              <button
-                onClick={async () => {
-                  console.log('🧪 Testing code execution...');
-                  console.log('📝 Code:', code);
-                  console.log('🌐 Language:', selectedLanguage);
-                  
-                  // Code execution for testing
-                  try {
-                    if (selectedLanguage === 'javascript') {
-                      // Create a safe execution environment
-                      const safeEval = (code) => {
-                        // Remove potentially dangerous code
-                        const sanitizedCode = code
-                          .replace(/process\./g, '')
-                          .replace(/require\(/g, '')
-                          .replace(/import\s+/g, '')
-                          .replace(/eval\(/g, '')
-                          .replace(/Function\(/g, '');
-                        
-                        // Create a safe context
-                        const context = {
-                          console: {
-                            log: (...args) => console.log('Code output:', ...args),
-                            error: (...args) => console.error('Code error:', ...args),
-                            warn: (...args) => console.warn('Code warning:', ...args)
-                          },
-                          setTimeout: () => {},
-                          setInterval: () => {},
-                          clearTimeout: () => {},
-                          clearInterval: () => {}
-                        };
-                        
-                        // Execute in safe context
-                        const func = new Function('console', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', sanitizedCode);
-                        return func(context.console, context.setTimeout, context.setInterval, context.clearTimeout, context.clearInterval);
-                      };
-                      
-                      const result = safeEval(code);
-                      console.log('✅ JavaScript code executed successfully!');
-                      console.log('📊 Result:', result);
-                      
-                      // Show result in a better way
-                      setSubmissionResult({
-                        message: 'JavaScript code executed successfully!',
-                        result: result,
-                        executionTime: Date.now(),
-                        isPreview: true
-                      });
-                    } else if (selectedLanguage === 'python') {
-                      // Execute Python code using Pyodide
-                      console.log('🐍 Executing Python code...');
-                      
-                      // Get a sample test input from the problem
-                      const testInput = problem.testCases && problem.testCases.length > 0 
-                        ? problem.testCases[0].input 
-                        : [1, 2, 3]; // Default test input
-                      
-                      let pythonResult = await executePythonCode(code, testInput);
-                      
-                      // If Pyodide fails, try the fallback method
-                      if (!pythonResult.success && pythonResult.error.includes('Failed to load Python interpreter')) {
-                        console.log('🔄 Pyodide failed, trying fallback method...');
-                        pythonResult = await executePythonCodeSimple(code, testInput);
-                      }
-                      
-                      if (pythonResult.success) {
-                        console.log('✅ Python code executed successfully!');
-                        setSubmissionResult({
-                          message: pythonResult.isMock ? 'Python code analyzed (mock execution)' : 'Python code executed successfully!',
-                          result: pythonResult.result,
-                          stdout: pythonResult.stdout,
-                          executionTime: Date.now(),
-                          isPreview: true,
-                          isMock: pythonResult.isMock
-                        });
-                      } else {
-                        console.error('❌ Python execution failed:', pythonResult.error);
-                        setSubmissionResult({
-                          error: `Python execution error: ${pythonResult.error}`,
-                          stdout: pythonResult.stdout || '',
-                          traceback: pythonResult.traceback || '',
-                          rawOutput: pythonResult.rawOutput || '',
-                          isPreview: true
-                        });
-                      }
-                    } else {
-                      // For other languages, show a helpful message
-                      setSubmissionResult({
-                        message: `Code execution preview is only available for JavaScript and Python.`,
-                        details: 'Use Submit Solution for full testing with all languages.',
-                        isPreview: true
-                      });
-                    }
-                  } catch (error) {
-                    console.error('❌ Code execution error:', error);
-                    setSubmissionResult({
-                      error: `Code execution error: ${error.message}`,
-                      isPreview: true
-                    });
-                  }
-                }}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Test Code
-              </button>
-              
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
@@ -745,42 +426,7 @@ print(f"Type: {type(result)}")
                   </>
                 )}
               </button>
-              
-              {/* Debug button to test submission result structure */}
-              <button
-                onClick={() => {
-                  console.log('🧪 Testing submission result structure...');
-                  const mockResult = {
-                    message: 'Test submission result',
-                    submission: {
-                      _id: 'test123',
-                      overallResult: {
-                        isCorrect: false,
-                        totalTestCases: 1,
-                        passedTestCases: 0,
-                        executionTime: 5,
-                        score: 0
-                      },
-                      executionResults: [
-                        {
-                          testCaseIndex: 0,
-                          input: '[1,2,3]',
-                          expectedOutput: '132',
-                          actualOutput: null,
-                          isCorrect: false,
-                          executionTime: 5,
-                          errorMessage: 'Test error message'
-                        }
-                      ]
-                    }
-                  };
-                  console.log('🧪 Mock submission result:', mockResult);
-                  setSubmissionResult(mockResult);
-                }}
-                className="px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-              >
-                🧪 Test Result
-              </button>
+
             </div>
           </div>
 
@@ -790,7 +436,7 @@ print(f"Type: {type(result)}")
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                 {submissionResult.isPreview ? 'Code Test Result' : 'Submission Result'}
               </h3>
-              
+
               {submissionResult.error ? (
                 <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
                   <XCircle className="w-5 h-5" />
@@ -951,8 +597,8 @@ print(f"Type: {type(result)}")
                           <div className="space-y-3">
                             {submissionResult.submission.executionResults.map((result, index) => (
                               <div key={index} className={`p-4 rounded-lg border-2 ${
-                                result.isCorrect 
-                                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                                result.isCorrect
+                                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                                   : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                               }`}>
                                 <div className="flex items-center justify-between mb-2">
@@ -961,8 +607,8 @@ print(f"Type: {type(result)}")
                                     Test Case {index + 1}
                                   </span>
                                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                    result.isCorrect 
-                                      ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200' 
+                                    result.isCorrect
+                                      ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
                                       : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
                                   }`}>
                                     {result.isCorrect ? '✅ PASSED' : '❌ FAILED'}

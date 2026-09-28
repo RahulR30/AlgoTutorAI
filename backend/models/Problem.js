@@ -64,6 +64,7 @@ const problemSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  starterCode: { javascript: String, python: String },
   hints: [{
     type: String,
     maxlength: 500

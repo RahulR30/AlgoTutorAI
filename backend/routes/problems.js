@@ -6,6 +6,19 @@ const codeExecutor = require('../services/codeExecutor');
 
 const router = express.Router();
 
+async function findProblems(query, options = {}) {
+  const page = Math.max(1, parseInt(options.page) || 1);
+  const limit = Math.max(1, Math.min(1000, parseInt(options.limit) || 10));
+  const [problems, totalProblems] = await Promise.all([
+    Problem.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).select('-solution').lean(),
+    Problem.countDocuments(query)
+  ]);
+  return {
+    problems: problems.map(problem => ({ ...problem, testCases: problem.testCases.filter(tc => !tc.isHidden) })),
+    pagination: { currentPage: page, totalPages: Math.ceil(totalProblems / limit), totalProblems }
+  };
+}
+
 // Create a new problem (for development/testing)
 router.post('/', async (req, res) => {
   try {
@@ -144,7 +157,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get problem by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id([a-fA-F0-9]{24})', async (req, res) => {
   try {
     const problem = await Problem.findById(req.params.id);
     
@@ -251,7 +264,7 @@ router.get('/difficulty/:level', async (req, res) => {
       sortOrder: 'desc'
     };
 
-    const result = await inMemoryDB.findProblems(query, options);
+    const result = await findProblems(query, options);
     res.json(result);
   } catch (error) {
     console.error('Error fetching problems by difficulty:', error);
@@ -265,7 +278,7 @@ router.get('/topic/:topicName', async (req, res) => {
     const { topicName } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    const query = { isActive: true, topic: topicName };
+    const query = { isActive: true, topics: topicName };
     const options = {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -273,7 +286,7 @@ router.get('/topic/:topicName', async (req, res) => {
       sortOrder: 'desc'
     };
 
-    const result = await inMemoryDB.findProblems(query, options);
+    const result = await findProblems(query, options);
     res.json(result);
   } catch (error) {
     console.error('Error fetching problems by topic:', error);
@@ -288,9 +301,9 @@ router.get('/random', async (req, res) => {
     const query = { isActive: true };
     
     if (difficulty) query.difficulty = difficulty;
-    if (topic) query.topic = topic;
+    if (topic) query.topics = topic;
 
-    const allProblems = await inMemoryDB.findProblems(query, { limit: 1000 });
+    const allProblems = await findProblems(query, { limit: 1000 });
     const problems = allProblems.problems;
     
     if (problems.length === 0) {
@@ -322,7 +335,7 @@ router.get('/popular', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     
-    const allProblems = await inMemoryDB.findProblems({ isActive: true }, { limit: 1000 });
+    const allProblems = await findProblems({ isActive: true }, { limit: 1000 });
     const problems = allProblems.problems
       .sort((a, b) => b.statistics.totalSubmissions - a.statistics.totalSubmissions)
       .slice(0, parseInt(limit))
@@ -353,7 +366,7 @@ router.get('/recent', async (req, res) => {
       sortOrder: 'desc'
     };
 
-    const result = await inMemoryDB.findProblems({ isActive: true }, options);
+    const result = await findProblems({ isActive: true }, options);
     
     // Remove solution and hidden test cases
     const publicProblems = result.problems.map(problem => ({
@@ -385,10 +398,18 @@ router.post('/:id/submit', auth, async (req, res) => {
       });
     }
 
+    if (!['javascript', 'python'].includes(language)) {
+      return res.status(400).json({ error: 'Choose JavaScript or Python for submissions.' });
+    }
+
     // Get problem with test cases
     const problem = await Problem.findById(id);
     if (!problem) {
       return res.status(404).json({ error: 'Problem not found' });
+    }
+
+    if (!problem.testCases.length) {
+      return res.status(422).json({ error: 'This problem has no test cases yet.' });
     }
 
     // Execute code against test cases
@@ -406,7 +427,10 @@ router.post('/:id/submit', auth, async (req, res) => {
       language,
       code,
       executionResults: executionResult.executionResults,
-      overallResult: executionResult.overallResult
+      overallResult: executionResult.overallResult,
+      status: 'completed',
+      isSubmitted: true,
+      submittedAt: new Date()
     });
 
     await submission.save();
@@ -419,20 +443,21 @@ router.post('/:id/submit', auth, async (req, res) => {
       }
     });
 
-    // Update user progress if solution is correct
-    if (executionResult.overallResult.isCorrect) {
-      const User = require('../models/User');
-      await User.findByIdAndUpdate(userId, {
-        $inc: {
-          'learningStats.totalProblemsSolved': 1,
-          'learningStats.totalSubmissions': 1,
-          'learningStats.correctSubmissions': 1
-        },
-        $set: {
-          'learningStats.lastActiveDate': new Date()
-        }
-      });
-    }
+    // Count every attempt and derive solved count from distinct accepted problems.
+    const User = require('../models/User');
+    const solvedIds = await Submission.distinct('problemId', {
+      userId, 'overallResult.isCorrect': true
+    });
+    await User.findByIdAndUpdate(userId, {
+      $inc: {
+        'learningStats.totalSubmissions': 1,
+        'learningStats.correctSubmissions': executionResult.overallResult.isCorrect ? 1 : 0
+      },
+      $set: {
+        'learningStats.totalProblemsSolved': solvedIds.length,
+        'learningStats.lastActiveDate': new Date()
+      }
+    });
 
     res.json({
       message: 'Solution submitted successfully',
