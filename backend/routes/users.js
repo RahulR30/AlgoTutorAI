@@ -1,5 +1,17 @@
 const express = require('express');
-const inMemoryDB = require('../services/inMemoryDB');
+const User = require('../models/User');
+const Submission = require('../models/Submission');
+
+async function findSubmissionsByUser(userId, options = {}) {
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.max(1, Math.min(1000, Number(options.limit) || 20));
+  const [submissions, total] = await Promise.all([
+    Submission.find({ userId }).sort({ createdAt: -1 }).skip((page - 1) * limit)
+      .limit(limit).populate('problemId', 'title difficulty topics').lean(),
+    Submission.countDocuments({ userId })
+  ]);
+  return { submissions, pagination: { currentPage: page, totalPages: Math.ceil(total / limit), totalSubmissions: total, hasNext: page * limit < total, hasPrev: page > 1 } };
+}
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,7 +21,7 @@ const router = express.Router();
 // @access  Private
 router.get('/profile', auth, async (req, res) => {
   try {
-    const user = await inMemoryDB.findUserById(req.user.id);
+    const user = await User.findById(req.user.id).lean();
     
     if (!user) {
       return res.status(404).json({
@@ -48,7 +60,7 @@ router.put('/profile', auth, async (req, res) => {
     if (location !== undefined) updates['profile.location'] = location;
     if (website !== undefined) updates['profile.website'] = website;
 
-    const updatedUser = await inMemoryDB.updateUser(req.user.id, updates);
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true, runValidators: true }).lean();
     
     if (!updatedUser) {
       return res.status(404).json({
@@ -78,7 +90,7 @@ router.put('/profile', auth, async (req, res) => {
 // @access  Private
 router.get('/progress', auth, async (req, res) => {
   try {
-    const user = await inMemoryDB.findUserById(req.user.id);
+    const user = await User.findById(req.user.id).lean();
     
     if (!user) {
       return res.status(404).json({
@@ -88,7 +100,7 @@ router.get('/progress', auth, async (req, res) => {
     }
 
     // Get recent submissions
-    const submissions = await inMemoryDB.findSubmissionsByUser(req.user.id, {
+    const submissions = await findSubmissionsByUser(req.user.id, {
       limit: 10,
       sortBy: 'createdAt',
       sortOrder: 'desc'
@@ -157,7 +169,7 @@ router.get('/submissions', auth, async (req, res) => {
       sortOrder: 'desc'
     };
 
-    const result = await inMemoryDB.findSubmissionsByUser(req.user.id, options);
+    const result = await findSubmissionsByUser(req.user.id, options);
 
     res.json({
       message: 'Submissions retrieved successfully',
@@ -178,7 +190,7 @@ router.get('/submissions', auth, async (req, res) => {
 // @access  Private
 router.get('/achievements', auth, async (req, res) => {
   try {
-    const user = await inMemoryDB.findUserById(req.user.id);
+    const user = await User.findById(req.user.id).lean();
     
     if (!user) {
       return res.status(404).json({
@@ -252,7 +264,7 @@ router.get('/achievements', auth, async (req, res) => {
     // Add new achievements to user
     if (newAchievements.length > 0) {
       user.achievements.push(...newAchievements);
-      await inMemoryDB.updateUser(req.user.id, user);
+      await User.findByIdAndUpdate(req.user.id, { $set: { achievements: user.achievements } });
     }
 
     res.json({
@@ -277,10 +289,10 @@ router.get('/leaderboard', async (req, res) => {
     const { limit = 20 } = req.query;
     
     // Get all users and sort by problems solved
-    const allUsers = Array.from(inMemoryDB.users.values())
-      .filter(user => user.isActive)
-      .sort((a, b) => b.learningStats.totalProblemsSolved - a.learningStats.totalProblemsSolved)
-      .slice(0, parseInt(limit))
+    const allUsers = (await User.find({ isActive: true })
+      .sort({ 'learningStats.totalProblemsSolved': -1 })
+      .limit(Math.max(1, Math.min(100, parseInt(limit) || 20)))
+      .select('username profile learningStats').lean())
       .map((user, index) => ({
         rank: index + 1,
         username: user.username,
@@ -310,7 +322,7 @@ router.get('/leaderboard', async (req, res) => {
 // @access  Private
 router.get('/stats', auth, async (req, res) => {
   try {
-    const user = await inMemoryDB.findUserById(req.user.id);
+    const user = await User.findById(req.user.id).lean();
     
     if (!user) {
       return res.status(404).json({
@@ -320,7 +332,7 @@ router.get('/stats', auth, async (req, res) => {
     }
 
     // Get submission statistics
-    const allSubmissions = await inMemoryDB.findSubmissionsByUser(req.user.id, { limit: 1000 });
+    const allSubmissions = await findSubmissionsByUser(req.user.id, { limit: 1000 });
     const submissions = allSubmissions.submissions;
     
     // Calculate submission stats
@@ -393,7 +405,7 @@ router.put('/preferences', auth, async (req, res) => {
     if (notifications !== undefined) updates['preferences.notifications'] = notifications;
     if (theme !== undefined) updates['preferences.theme'] = theme;
 
-    const updatedUser = await inMemoryDB.updateUser(req.user.id, updates);
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true, runValidators: true }).lean();
     
     if (!updatedUser) {
       return res.status(404).json({

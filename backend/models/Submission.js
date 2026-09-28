@@ -15,7 +15,7 @@ const executionResultSchema = new mongoose.Schema({
   },
   actualOutput: {
     type: mongoose.Schema.Types.Mixed,
-    required: true
+    default: null
   },
   isCorrect: {
     type: Boolean,

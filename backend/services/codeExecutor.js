@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
+const { isDeepStrictEqual } = require('node:util');
 
 class CodeExecutor {
   constructor() {
@@ -9,9 +10,9 @@ class CodeExecutor {
   }
 
   async executeCode(language, code, testCases, problemId) {
+    let tempDir;
     try {
-      const tempDir = path.join(this.tempDir, `algotutor-${problemId}-${Date.now()}`);
-      await fs.mkdir(tempDir, { recursive: true });
+      tempDir = await fs.mkdtemp(path.join(this.tempDir, "algotutor-"));
 
       const results = [];
       
@@ -21,9 +22,6 @@ class CodeExecutor {
         results.push(result);
       }
 
-      // Clean up temp directory
-      await this.cleanup(tempDir);
-
       return {
         executionResults: results,
         overallResult: this.calculateOverallResult(results)
@@ -31,6 +29,8 @@ class CodeExecutor {
     } catch (error) {
       console.error('Code execution error:', error);
       throw new Error('Failed to execute code');
+    } finally {
+      if (tempDir) await this.cleanup(tempDir);
     }
   }
 
@@ -120,7 +120,7 @@ ${code}
 
 # Test case
 import json
-input_data = ${JSON.stringify(testCase.input)}
+input_data = json.loads(bytes.fromhex("${Buffer.from(JSON.stringify(testCase.input), 'utf8').toString('hex')}").decode("utf-8"))
 result = ${this.getPythonFunctionCall(testCase.input, code)}
 print(json.dumps(result))
 `;
@@ -180,27 +180,15 @@ int main() {
   }
 
   getPythonFunctionCall(input, code) {
-    // Try to detect function name from code
     const functionMatch = code.match(/def\s+(\w+)\s*\(/);
-    if (functionMatch) {
-      const functionName = functionMatch[1];
-      return `${functionName}(${this.getPythonArguments(input)})`;
+    let functionName = functionMatch ? functionMatch[1] : 'solution';
+    if (!functionMatch && input && typeof input === 'object' && !Array.isArray(input)) {
+      if (input.nums && input.target !== undefined) functionName = 'twoSum';
+      else if (input.s !== undefined) functionName = 'isValid';
+      else if (input.nums) functionName = 'maxSubArray';
+      else if (input.n !== undefined) functionName = 'climbStairs';
     }
-    
-    // Fallback to common patterns
-    if (input.nums && input.target !== undefined) {
-      return 'twoSum(input["nums"], input["target"])';
-    } else if (input.s) {
-      return 'isValid(input["s"])';
-    } else if (input.nums && !input.target) {
-      return 'maxSubArray(input["nums"])';
-    } else if (input.n !== undefined) {
-      return 'climbStairs(input["n"])';
-    } else if (Array.isArray(input)) {
-      // For array inputs, pass the array directly
-      return `solution(${this.pythonValueToString(input)})`;
-    }
-    return 'solution(input)';
+    return `${functionName}(${this.getPythonArguments(input)})`;
   }
 
   getJavaScriptArguments(input) {
@@ -208,35 +196,17 @@ int main() {
       // For arrays, pass as a single argument, not comma-separated
       return JSON.stringify(input);
     } else if (typeof input === 'object' && input !== null) {
-      return Object.entries(input).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(', ');
+      return Object.values(input).map(value => JSON.stringify(value)).join(', ');
     } else {
       return JSON.stringify(input);
     }
   }
 
   getPythonArguments(input) {
-    if (Array.isArray(input)) {
-      // For arrays, pass as a single argument, not comma-separated
-      return this.pythonValueToString(input);
-    } else if (typeof input === 'object' && input !== null) {
-      return Object.entries(input).map(([key, value]) => `${key}=${this.pythonValueToString(value)}`).join(', ');
-    } else {
-      return this.pythonValueToString(input);
-    }
-  }
-
-  pythonValueToString(value) {
-    if (typeof value === 'string') {
-      return `"${value}"`;
-    } else if (typeof value === 'boolean') {
-      return value ? 'True' : 'False';
-    } else if (value === null) {
-      return 'None';
-    } else if (Array.isArray(value)) {
-      return `[${value.map(v => this.pythonValueToString(v)).join(', ')}]`;
-    } else {
-      return String(value);
-    }
+    // Decode once as data, then pass named inputs as keyword arguments.
+    return input !== null && typeof input === 'object' && !Array.isArray(input)
+      ? '**input_data'
+      : 'input_data';
   }
 
   getJavaTestCode(testCase) {
@@ -371,11 +341,16 @@ int main() {
       }, (error, stdout, stderr) => {
         const executionTime = Date.now() - startTime;
         
-        if (error && error.code === 'ETIMEDOUT') {
+        if (error && (error.killed || error.code === 'ETIMEDOUT')) {
           reject(new Error('Execution timeout'));
           return;
         }
         
+        if (error) {
+          reject(new Error(`Execution failed: ${stderr.trim() || error.message}`));
+          return;
+        }
+
         resolve({ stdout, stderr, executionTime });
       });
     });
@@ -410,31 +385,18 @@ int main() {
   }
 
   compareOutput(actual, expected) {
-    if (actual === expected) return true;
-    
-    // Handle array comparison
-    if (Array.isArray(actual) && Array.isArray(expected)) {
-      if (actual.length !== expected.length) return false;
-      return actual.every((val, index) => val === expected[index]);
-    }
-    
-    // Handle object comparison for some cases
-    if (typeof actual === 'object' && typeof expected === 'object') {
-      return JSON.stringify(actual) === JSON.stringify(expected);
-    }
-    
-    return false;
+    return isDeepStrictEqual(actual, expected);
   }
 
   calculateOverallResult(results) {
     const totalTestCases = results.length;
     const passedTestCases = results.filter(r => r.isCorrect).length;
     const totalExecutionTime = results.reduce((sum, r) => sum + r.executionTime, 0);
-    const averageExecutionTime = totalExecutionTime / totalTestCases;
-    const score = Math.round((passedTestCases / totalTestCases) * 100);
+    const averageExecutionTime = totalTestCases ? totalExecutionTime / totalTestCases : 0;
+    const score = totalTestCases ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
     
     return {
-      isCorrect: passedTestCases === totalTestCases,
+      isCorrect: totalTestCases > 0 && passedTestCases === totalTestCases,
       totalTestCases,
       passedTestCases,
       executionTime: averageExecutionTime,

@@ -23,10 +23,10 @@ const LoginPage = () => {
 
   const onSubmit = async (data) => {
     setIsLoading(true);
-    
+
     try {
       const result = await login(data.email, data.password);
-      
+
       if (result.success) {
         toast.success('Login successful! Welcome back!');
         navigate(from, { replace: true });
@@ -161,12 +161,7 @@ const LoginPage = () => {
             </div>
 
             <div className="text-sm">
-              <Link
-                to="/forgot-password"
-                className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
-              >
-                Forgot your password?
-              </Link>
+
             </div>
           </div>
 
@@ -210,7 +205,7 @@ const LoginPage = () => {
           className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg"
         >
           <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-            <strong>Demo Account:</strong> demo@algotutor.ai / demo123
+            <strong>Local demo account (npm run demo):</strong> demo@algotutor.ai / demo123
           </p>
         </motion.div>
       </motion.div>

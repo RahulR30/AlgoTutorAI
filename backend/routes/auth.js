@@ -62,12 +62,12 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     // Remove password from response
-    const { password: _, ...userResponse } = user;
+    const { password: _, ...userResponse } = user.toObject();
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -128,12 +128,12 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     // Remove password from response
-    const { password: _, ...userResponse } = user;
+    const { password: _, ...userResponse } = user.toObject();
 
     res.json({
       message: 'Login successful',
@@ -164,7 +164,7 @@ router.get('/me', auth, async (req, res) => {
     }
 
     // Remove password from response
-    const { password: _, ...userResponse } = user;
+    const { password: _, ...userResponse } = user.toObject();
 
     res.json({
       message: 'User profile retrieved successfully',
@@ -207,7 +207,7 @@ router.put('/profile', auth, async (req, res) => {
     }
 
     // Remove password from response
-    const { password: _, ...userResponse } = updatedUser;
+    const { password: _, ...userResponse } = updatedUser.toObject();
 
     res.json({
       message: 'Profile updated successfully',
@@ -250,7 +250,7 @@ router.put('/preferences', auth, async (req, res) => {
     }
 
     // Remove password from response
-    const { password: _, ...userResponse } = updatedUser;
+    const { password: _, ...userResponse } = updatedUser.toObject();
 
     res.json({
       message: 'Preferences updated successfully',
@@ -287,7 +287,7 @@ router.post('/refresh', auth, async (req, res) => {
 
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 

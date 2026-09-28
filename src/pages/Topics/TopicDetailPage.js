@@ -1,36 +1,19 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Code } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { useQuery } from 'react-query';
+import { problemsAPI } from '../../services/api';
 
-const TopicDetailPage = () => {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Topic Details
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Detailed topic information and related problems
-          </p>
-        </motion.div>
-      </div>
-
-      <div className="text-center py-12">
-        <Code className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          Topic details coming soon!
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Detailed topic information and learning resources will be available in the next update.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export default TopicDetailPage;
+export default function TopicDetailPage() {
+  const { topicName } = useParams();
+  const { data, isLoading, isError } = useQuery(['topic', topicName], () => problemsAPI.getByTopic(topicName).then(r => r.data));
+  return <section className="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4">
+    <Link to="/topics" className="text-blue-600">← All topics</Link>
+    <h1 className="text-3xl font-bold capitalize">{topicName.replace(/-/g, ' ')}</h1>
+    {isLoading && <p>Loading problems…</p>}
+    {isError && <p role="alert">Could not load this topic. Check the API connection and try again.</p>}
+    {data?.problems.length === 0 && <p>No problems in this topic yet.</p>}
+    {data?.problems.map(p => <Link key={p._id} to={`/problems/${p._id}`} className="block border rounded p-4 hover:border-blue-500">
+      <strong>{p.title}</strong><span className="ml-4 text-gray-500">{p.difficulty}</span>
+    </Link>)}
+  </section>;
+}
