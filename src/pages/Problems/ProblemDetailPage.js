@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Editor } from '@monaco-editor/react';
 import {
   ArrowLeft,
@@ -12,8 +11,6 @@ import {
   Users,
   TrendingUp,
   BookOpen,
-  Lightbulb,
-  Settings,
   Star
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +27,23 @@ const ProblemDetailPage = () => {
   const [submissionResult, setSubmissionResult] = useState(null);
 
   useEffect(() => {
-    fetchProblem();
+    let active = true;
+
+    const loadProblem = async () => {
+      try {
+        const response = await problemsAPI.getById(id);
+        if (active) setProblem(response.data.problem);
+      } catch (error) {
+        console.error('Error fetching problem:', error.response?.data || error.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadProblem();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -38,26 +51,6 @@ const ProblemDetailPage = () => {
       setCode(problem.starterCode?.[selectedLanguage] || getStarterCode(selectedLanguage));
     }
   }, [problem, selectedLanguage]);
-
-  const fetchProblem = async () => {
-    try {
-      console.log('🔍 Fetching problem with ID:', id);
-      const response = await problemsAPI.getById(id);
-      const data = response.data;
-      console.log('✅ Problem data received:', data);
-      setProblem(data.problem);
-
-      // Set initial code based on selected language
-      if (data.problem.starterCode) {
-        setCode(data.problem.starterCode[selectedLanguage] || '');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching problem:', error);
-      console.error('   Error details:', error.response?.data || error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStarterCode = (language) => {
     const templates = {

@@ -10,10 +10,8 @@ import {
   Trophy, 
   User, 
   BarChart3, 
-  Settings,
   Sun,
   Moon,
-  Monitor,
   LogOut,
   ChevronDown
 } from 'lucide-react';
@@ -24,7 +22,7 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { theme, toggleTheme, setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
   const navigation = [
