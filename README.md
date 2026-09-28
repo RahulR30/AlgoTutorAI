@@ -1,244 +1,75 @@
-# AlgoTutorAI - AI-Powered Algorithm Learning Platform
+# AlgoTutorAI
 
-AlgoTutorAI is a comprehensive web-based platform that helps students learn data structures, algorithms, and technical interview topics through AI-generated problems and adaptive learning. Built with modern web technologies and powered by OpenAI's GPT models, it provides a personalized learning experience that adapts to each student's skill level and progress.
+An algorithm-practice application with a React editor, an Express API, MongoDB-backed submissions, and a server-side code executor. The backend grades each test case and records submission results for progress tracking.
 
-## Features
+## Engineering overview
 
-### AI-Powered Learning
-- **Intelligent Problem Generation**: AI creates unique coding problems based on topic, difficulty, and learning objectives
-- **Adaptive Difficulty**: Problems automatically adjust to match your skill level
-- **Real-time Feedback**: Get instant AI analysis of your code with suggestions for improvement
-- **Smart Hints**: Progressive hints that guide you toward solutions without giving them away
-- **Personalized Recommendations**: AI suggests problems based on your learning patterns and weak areas
+- **Frontend:** React 18, Monaco Editor, React Query, Tailwind CSS.
+- **API:** Express, Mongoose, JWT authentication, bcrypt password hashing, rate limiting.
+- **Execution:** generated language wrappers run submitted functions against problem inputs; results include correctness, elapsed time, and execution errors.
+- **Persistence:** problem definitions, user accounts, and submission records live in MongoDB.
 
-### Comprehensive Topic Coverage
-- **Data Structures**: Arrays, Strings, Linked Lists, Stacks, Queues, Trees, Graphs, Heaps, Hash Tables
-- **Algorithms**: Dynamic Programming, Greedy, Backtracking, Two Pointers, Sliding Window, Binary Search
-- **Advanced Topics**: Sorting, Recursion, Bit Manipulation, Math, Geometry, Game Theory, System Design
-- **Interview Preparation**: All topics commonly covered in technical coding interviews
+A submission travels from the editor to `POST /api/problems/:id/submit`, through the executor, then into a submission record and the user's progress statistics.
 
-###  Learning Features
-- **Progress Tracking**: Monitor your improvement with detailed analytics
-- **Achievement System**: Earn badges and rewards for milestones
-- **Streak Tracking**: Maintain daily learning habits
-- **Performance Analytics**: Detailed insights into your strengths and weaknesses
-- **Learning Paths**: Structured progression through topics
+## Executor reliability
 
-### Development Environment
-- **Multi-language Support**: JavaScript, Python, Java, C++
-- **Code Editor**: Monaco Editor with syntax highlighting and autocomplete
-- **Test Execution**: Run your code against test cases
-- **Solution Comparison**: Compare your approach with optimal solutions
+The regression suite exercises actual JavaScript and Python subprocesses. It checks that programs which crash or time out cannot pass merely by printing the expected output, that JSON inputs survive Python decoding, and that simultaneous submissions use distinct temporary directories. Temporary files are cleaned up after unexpected failures.
 
-### User Experience
-- **Modern UI/UX**: Beautiful, responsive design with dark/light mode
-- **Mobile Responsive**: Works seamlessly on all devices
-- **Real-time Updates**: Live progress tracking and notifications
-- **Community Features**: Leaderboards and user rankings
-
-##  Technology Stack
-
-### Backend
-- **Node.js** with **Express.js** framework
-- **MongoDB** with **Mongoose** ODM
-- **OpenRouter API** for AI-powered features
-- **JWT** for authentication
-- **bcryptjs** for password hashing
-- **Rate limiting** and security middleware
-
-### Frontend
-- **React 18** with modern hooks
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **React Query** for data fetching
-- **Monaco Editor** for code editing
-- **Lucide React** for icons
-
-### Development Tools
-- **ESLint** for code quality
-- **Prettier** for code formatting
-- **Nodemon** for backend development
-- **Concurrently** for running both servers
-
-##  Quick Start
-
-### Prerequisites
-- Node.js 16+ and npm
-- MongoDB (local or cloud)
-- OpenRouter API Key
-
-### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/algotutor-ai.git
-cd algotutor-ai
+npm test --prefix backend
 ```
 
-### 2. Install Dependencies
-```bash
-# Install backend dependencies
-npm install
+These tests require Node.js 22+ and Python 3 on PATH. They use Node's built-in test runner and need no npm installation, database, or API credentials. The timeout case takes approximately ten seconds. GitHub Actions runs the suite on Node 22 and 24.
 
-# Install frontend dependencies
-cd client
+## Run locally
+
+Requirements: Node.js 22+, npm, Python 3, and a MongoDB instance.
+
+```bash
+git clone https://github.com/RahulR30/AlgoTutorAI.git
+cd AlgoTutorAI
 npm install
-cd ..
+npm install --prefix backend
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the root directory:
-```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
+Create `backend/.env`:
 
-# MongoDB Configuration
+```dotenv
+PORT=5001
 MONGODB_URI=mongodb://localhost:27017/algotutor-ai
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# OpenAI Configuration
-OPENAI_API_KEY=your-openai-api-key-here
-
-# Client Configuration
+JWT_SECRET=replace-with-a-long-random-secret
 CLIENT_URL=http://localhost:3000
 ```
 
-### 4. Start the Application
+Start the API from the backend directory so its environment file is loaded:
+
 ```bash
-# Development mode (runs both backend and frontend)
+cd backend
 npm run dev
-
-# Or run separately:
-# Backend only
-npm run server
-
-# Frontend only
-npm run client
 ```
 
-The application will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
+In another terminal, start the frontend from the repository root:
 
-## 📁 Project Structure
-
-```
-algotutor-ai/
-├── server/                 # Backend server
-│   ├── config/            # Database and configuration
-│   ├── middleware/        # Express middleware
-│   ├── models/            # MongoDB models
-│   ├── routes/            # API routes
-│   └── index.js           # Server entry point
-├── client/                # React frontend
-│   ├── src/
-│   │   ├── components/    # Reusable components
-│   │   ├── contexts/      # React contexts
-│   │   ├── pages/         # Page components
-│   │   ├── services/      # API services
-│   │   └── App.js         # Main app component
-│   ├── public/            # Static assets
-│   └── package.json       # Frontend dependencies
-├── package.json           # Backend dependencies
-└── README.md              # This file
+```bash
+npm start
 ```
 
-##  Usage Guide
+The frontend runs at `http://localhost:3000` and defaults to `http://localhost:5001/api`. To change the API host, set `REACT_APP_API_URL` in a root `.env` file before starting or building the frontend. Problem records must be populated separately; an empty database has no practice catalog.
 
-### For Students
-1. **Create an Account**: Sign up with email and password
-2. **Choose Topics**: Select topics you want to learn
-3. **Set Difficulty**: Start with beginner level
-4. **Practice Problems**: Solve AI-generated problems
-5. **Get Feedback**: Review AI analysis of your solutions
-6. **Track Progress**: Monitor your improvement over time
+## Repository map
 
-### For Educators
-1. **Review Problems**: AI-generated problems are reviewed before publication
-2. **Custom Problems**: Create custom problems for specific learning objectives
-3. **Student Analytics**: Monitor class performance and progress
-4. **Adaptive Learning**: Let AI adjust difficulty based on student performance
+- `src/`: frontend pages, editor, authentication context, and API client.
+- `backend/routes/`: authentication, problems, and user endpoints.
+- `backend/models/`: users, problems, and submissions.
+- `backend/services/codeExecutor.js`: language wrappers, process execution, grading, and cleanup.
+- `backend/test/`: executor regression tests.
 
-##  Security Features
+## Current limits
 
-- **JWT Authentication**: Secure token-based authentication
-- **Password Hashing**: bcryptjs for secure password storage
-- **Rate Limiting**: Prevent API abuse
-- **Input Validation**: Sanitize and validate all inputs
-- **CORS Protection**: Configured for production use
-- **Helmet.js**: Security headers and protection
+The executor runs code as operating-system processes, **not in a security sandbox**. Use locally with trusted code; public execution needs isolation, resource controls, and a separate worker boundary. Java and C++ wrappers exist but are not covered by this regression suite. JavaScript object inputs use property insertion order as argument order; Python object inputs use keyword arguments.
 
-##  API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `PUT /api/auth/profile` - Update profile
-
-### Problems
-- `GET /api/problems` - List all problems
-- `GET /api/problems/:id` - Get problem details
-- `POST /api/problems/:id/submit` - Submit solution
-- `GET /api/problems/topics/list` - List all topics
-
-### AI Features
-- `POST /api/ai/generate-problem` - Generate new problem
-- `POST /api/ai/analyze-solution` - Analyze user solution
-- `POST /api/ai/get-hint` - Get problem hint
-- `POST /api/ai/recommend-problems` - Get recommendations
-
-### User Management
-- `GET /api/users/progress` - Get learning progress
-- `GET /api/users/submissions` - Get submission history
-- `GET /api/users/achievements` - Get user achievements
-- `GET /api/users/leaderboard` - Get leaderboard
-
-##  Deployment
-
-### Backend Deployment
-1. Set environment variables for production
-2. Use PM2 or similar process manager
-3. Configure MongoDB connection
-4. Set up reverse proxy (Nginx)
-
-### Frontend Deployment
-1. Build the React app: `npm run build`
-2. Serve static files with Nginx or similar
-3. Configure API proxy
-
-### Environment Variables for Production
-```env
-NODE_ENV=production
-MONGODB_URI=your-production-mongodb-uri
-JWT_SECRET=your-production-jwt-secret
-CLIENT_URL=https://yourdomain.com
-```
+`backend/routes/ai.js` contains experimental Ollama integrations, but the current server does not mount those routes. A deployed frontend alone does not demonstrate a working AI service or grading backend.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Add tests if applicable
-5. Commit your changes: `git commit -m 'Add feature'`
-6. Push to the branch: `git push origin feature-name`
-7. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-## 🔮 Roadmap
-
-- [ ] **Mobile App**: React Native mobile application
-- [ ] **Video Tutorials**: Integrated video learning content
-- [ ] **Collaborative Learning**: Pair programming features
-- [ ] **Advanced Analytics**: Machine learning insights
-- [ ] **Interview Simulator**: Mock technical interviews
-- [ ] **Code Review System**: Peer code review features
-- [ ] **Integration APIs**: Connect with other learning platforms
-
----
+Reproduce the issue, add a regression case, run the backend tests, and submit a focused PR describing the failing behavior and the fix. Please include the input that reproduces grading or execution errors.
