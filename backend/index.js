@@ -16,7 +16,7 @@ const userRoutes = require('./routes/users');
 console.log('✅ User routes loaded');
 
 // Import MongoDB connection
-const connectDB = require('./config/db');
+const { connectWithRetry } = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -208,7 +208,7 @@ const startServer = async () => {
     // Only try to connect to MongoDB if URI is provided
     if (process.env.MONGODB_URI) {
       console.log('📊 Attempting to connect to MongoDB...');
-      await connectDB();
+      await connectWithRetry();
       console.log('📊 MongoDB connected successfully');
     } else {
       console.log('⚠️  Skipping MongoDB connection - MONGODB_URI not set');
